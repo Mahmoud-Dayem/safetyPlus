@@ -31,8 +31,8 @@ const StopCard = () => {
 
   // Report form state
   const [reportForm, setReportForm] = useState({
-    safeActsObserved: '',
-    unsafeActsObserved: '',
+    safeActsObserved: [''],
+    unsafeActsObserved: [''],
     date: new Date(), // Today's date as Date object
     site: '',
     area: '',
@@ -253,6 +253,54 @@ const StopCard = () => {
     updateReportForm(field, numericValue);
   };
 
+  const addSafeAct = () => {
+    setReportForm(prev => ({
+      ...prev,
+      safeActsObserved: [...prev.safeActsObserved, '']
+    }));
+  };
+
+  const addUnsafeAct = () => {
+    setReportForm(prev => ({
+      ...prev,
+      unsafeActsObserved: [...prev.unsafeActsObserved, '']
+    }));
+  };
+
+  const updateSafeAct = (index, value) => {
+    setReportForm(prev => {
+      const newSafeActs = [...prev.safeActsObserved];
+      newSafeActs[index] = value;
+      return { ...prev, safeActsObserved: newSafeActs };
+    });
+  };
+
+  const updateUnsafeAct = (index, value) => {
+    setReportForm(prev => {
+      const newUnsafeActs = [...prev.unsafeActsObserved];
+      newUnsafeActs[index] = value;
+      return { ...prev, unsafeActsObserved: newUnsafeActs };
+    });
+  };
+
+  const removeSafeAct = (index) => {
+    if (reportForm.safeActsObserved.length > 1) {
+      setReportForm(prev => ({
+        ...prev,
+        safeActsObserved: prev.safeActsObserved.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const removeUnsafeAct = (index) => {
+    if (reportForm.unsafeActsObserved.length > 1) {
+      setReportForm(prev => ({
+        ...prev,
+        unsafeActsObserved: prev.unsafeActsObserved.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
   // Function to calculate summary statistics
   const calculateSummary = () => {
     // Calculate actions completion
@@ -282,8 +330,8 @@ const StopCard = () => {
         total: totalConditionQuestions,
         percentage: totalConditionQuestions > 0 ? Math.round((completedConditionQuestions / totalConditionQuestions) * 100) : 0
       },
-      safeActs: reportForm.safeActsObserved.split('\n').filter(act => act.trim().length > 0).length,
-      unsafeActs: reportForm.unsafeActsObserved.split('\n').filter(act => act.trim().length > 0).length,
+      safeActs: reportForm.safeActsObserved.filter(act => act.trim().length > 0).length,
+      unsafeActs: reportForm.unsafeActsObserved.filter(act => act.trim().length > 0).length,
       duration: parseInt(reportForm.duration) || 0,
       peopleConducted: parseInt(reportForm.peopleConducted) || 0,
       peopleObserved: parseInt(reportForm.peopleObserved) || 0
@@ -399,30 +447,58 @@ const StopCard = () => {
             
             {/* Safe Acts Observed */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Safe acts observed</Text>
-              <TextInput
-                style={[styles.textInput, styles.multilineInput]}
-                value={reportForm.safeActsObserved}
-                onChangeText={(text) => updateReportForm('safeActsObserved', text)}
-                placeholder="Enter safe acts observed"
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
+              <View style={styles.labelWithButton}>
+                <Text style={styles.inputLabel}>Safe acts observed</Text>
+                <TouchableOpacity onPress={addSafeAct} style={styles.addButton}>
+                  <Ionicons name="add" size={20} color={colors.primary || '#FF9500'} />
+                </TouchableOpacity>
+              </View>
+              {reportForm.safeActsObserved.map((act, index) => (
+                <View key={index} style={styles.inputWithRemove}>
+                  <TextInput
+                    style={[styles.textInput, { flex: 1 }]}
+                    value={act}
+                    onChangeText={(text) => updateSafeAct(index, text)}
+                    placeholder={`Safe act ${index + 1}`}
+                  />
+                  {reportForm.safeActsObserved.length > 1 && (
+                    <TouchableOpacity
+                      onPress={() => removeSafeAct(index)}
+                      style={styles.removeButton}
+                    >
+                      <Ionicons name="remove" size={20} color="#FF3B30" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
             </View>
 
             {/* Unsafe Acts Observed */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Unsafe acts observed</Text>
-              <TextInput
-                style={[styles.textInput, styles.multilineInput]}
-                value={reportForm.unsafeActsObserved}
-                onChangeText={(text) => updateReportForm('unsafeActsObserved', text)}
-                placeholder="Enter unsafe acts observed"
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
+              <View style={styles.labelWithButton}>
+                <Text style={styles.inputLabel}>Unsafe acts observed</Text>
+                <TouchableOpacity onPress={addUnsafeAct} style={styles.addButton}>
+                  <Ionicons name="add" size={20} color={colors.primary || '#FF9500'} />
+                </TouchableOpacity>
+              </View>
+              {reportForm.unsafeActsObserved.map((act, index) => (
+                <View key={index} style={styles.inputWithRemove}>
+                  <TextInput
+                    style={[styles.textInput, { flex: 1 }]}
+                    value={act}
+                    onChangeText={(text) => updateUnsafeAct(index, text)}
+                    placeholder={`Unsafe act ${index + 1}`}
+                  />
+                  {reportForm.unsafeActsObserved.length > 1 && (
+                    <TouchableOpacity
+                      onPress={() => removeUnsafeAct(index)}
+                      style={styles.removeButton}
+                    >
+                      <Ionicons name="remove" size={20} color="#FF3B30" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
             </View>
 
             {/* Date */}
@@ -1135,6 +1211,32 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  labelWithButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  addButton: {
+    backgroundColor: '#F2F2F7',
+    borderRadius: 15,
+    padding: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inputWithRemove: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  removeButton: {
+    backgroundColor: '#FFEBEE',
+    borderRadius: 15,
+    padding: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
 });
