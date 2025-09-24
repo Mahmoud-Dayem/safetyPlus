@@ -4,31 +4,34 @@ import React from 'react';
 import Checkbox from 'expo-checkbox';
 import { colors } from '../constants/color';
 
-const ItemCheck = ({ item, itemIndex, questionStatus, updateQuestionStatus, areAllQuestionsChecked, toggleAllQuestions }) => {
+const ItemCheck = ({ item, itemIndex, type, questionStatus, updateQuestionStatus, areAllQuestionsChecked, toggleAllQuestions }) => {
     const allChecked = areAllQuestionsChecked(itemIndex);
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Checkbox
-                    value={allChecked}
-                    onValueChange={(status) => toggleAllQuestions(itemIndex, status)}
-                    color={allChecked ? colors.success : '#FFFFFF'}
-                    style={styles.headerCheckbox}
-                />
-                <Text  >
-                    All Safe
-                </Text>
+                
                 <Text style={styles.headerText}>
                     {item.label}
                 </Text>
+                <View style={styles.allSafeRow}>
+                    <Checkbox
+                        value={allChecked}
+                        onValueChange={(status) => toggleAllQuestions(itemIndex, status)}
+                        color={allChecked ? colors.success : '#FFFFFF'}
+                        style={styles.headerCheckbox}
+                    />
+                    <Text style={styles.allSafeText}>
+                        All Safe
+                    </Text>
+                </View>
             </View>
             {item.questions.map((question, questionIndex) => (
                 <View key={questionIndex} style={styles.checkboxContainer}>
                     <Checkbox
-                        value={questionStatus[`item_${itemIndex}_question_${questionIndex}`] || false}
+                        value={questionStatus[`${type}_${itemIndex}_question_${questionIndex}`] || false}
                         onValueChange={(status) => updateQuestionStatus(itemIndex, questionIndex, status)}
-                        color={questionStatus[`item_${itemIndex}_question_${questionIndex}`] ? colors.primary : undefined}
+                        color={questionStatus[`${type}_${itemIndex}_question_${questionIndex}`] ? colors.primary : undefined}
                     />
                     <Text style={styles.label}>{question.q}</Text>
                 </View>
@@ -67,23 +70,32 @@ const styles = StyleSheet.create({
     },
     header: {
         backgroundColor: colors.primary,
-        paddingVertical: 15,
+        paddingVertical: 6,
         paddingHorizontal: 16,
         borderTopLeftRadius: 8,
         borderTopRightRadius: 8,
+        flexDirection: 'column',
+        alignItems: 'left',
+    },
+    allSafeRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: 'left',
+        marginBottom: 8,
     },
     headerCheckbox: {
-        marginRight: 12,
+        marginRight: 8,
+       
+    },
+    allSafeText: {
+        fontSize: 14,
+        color: colors.headerTitle || '#fff',
+        fontWeight: '600',
     },
     headerText: {
-        fontSize: 18,
+        fontSize: 16,
         color: colors.headerTitle || '#fff',
         fontWeight: 'bold',
-        flex: 1,
-        textAlign: 'center',
+        textAlign: 'left',
     }
 });
 
