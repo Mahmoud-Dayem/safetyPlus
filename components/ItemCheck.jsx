@@ -2,6 +2,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import React from 'react';
 import Checkbox from 'expo-checkbox';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../constants/color';
 
 const ItemCheck = ({ item, itemIndex, type, questionStatus, updateQuestionStatus, areAllQuestionsChecked, toggleAllQuestions }) => {
@@ -10,10 +11,19 @@ const ItemCheck = ({ item, itemIndex, type, questionStatus, updateQuestionStatus
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                
-                <Text style={styles.headerText}>
-                    {item.label}
-                </Text>
+                <View style={styles.headerTitleRow}>
+                    {item.icon && (
+                        <Ionicons 
+                            name={item.icon} 
+                            size={20} 
+                            color={colors.headerTitle || '#fff'} 
+                            style={styles.headerIcon}
+                        />
+                    )}
+                    <Text style={styles.headerText}>
+                        {item.label}
+                    </Text>
+                </View>
                 <View style={styles.allSafeRow}>
                     <Checkbox
                         value={allChecked}
@@ -103,7 +113,15 @@ const styles = StyleSheet.create({
         color: colors.headerTitle || '#fff',
         fontWeight: 'bold',
         textAlign: 'left',
+        flex: 1,
+    },
+    headerTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginBottom: 2,
+    },
+    headerIcon: {
+        marginRight: 8,
     }
 });
 

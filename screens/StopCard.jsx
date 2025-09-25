@@ -16,6 +16,7 @@ import {
   StatusBar,
   Modal,
   Dimensions,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -66,13 +67,13 @@ const StopCard = () => {
       ),
       headerRight: () => (
         <View style={styles.headerRightContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.logoutHeaderButton}
             onPress={handleLogout}
           >
             <Ionicons name="log-out-outline" size={20} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.homeButton}
             onPress={() => navigation.navigate('Home')}
           >
@@ -85,107 +86,115 @@ const StopCard = () => {
 
   const actions = [
     {
+      label: "Reactions of People",
+      icon: "people-outline",
+      questions: [
+        { q: "Adjusting Personal Protective Equipment", status: false },
+        { q: "Changing Position", status: false },
+        { q: "Rearranging Jobs", status: false },
+        { q: "Stopping job", status: false },
+        { q: "Attaching Grounds", status: false },
+        { q: "Performing Lockouts", status: false }
+      ]
+    },
+    {
+      label: "Positions of People (Injury Causes)",
+      icon: "warning-outline",
+      questions: [
+        { q: "Striking Against or Being Struck by Objects", status: false },
+        { q: "Caught In, On, or Between Objects", status: false },
+        { q: "Falling", status: false },
+        { q: "Contacting Temperatures Extremes", status: false },
+        { q: "Contacting Electric Current", status: false },
+        { q: "Inhaling, Absorbing, or Swallowing a Hazardous Substance", status: false },
+        { q: "Repetitive Motions", status: false },
+        { q: "Awkward  Positions/ Static Posture", status: false },
+      ]
+    },
+    {
+      label: "Personal Protective Equipment(Head to Toe Check)",
+      icon: "shield-outline",
+      questions: [
+        { q: "Head", status: false },
+        { q: "Eyes and Face", status: false },
+        { q: "Ears", status: false },
+        { q: "Respiratory System", status: false },
+        { q: "Arms and Hands", status: false },
+        { q: "Trunk", status: false },
+        { q: "Legs and Feet", status: false },
+      ]
+    },
+
+    {
       label: "Tools and Equipment",
+      icon: "construct-outline",
       questions: [
-        { q: "Right for the job", status: false },
-        { q: "Is Safe Condition", status: false }
+        { q: "Right for the Job", status: false },
+        { q: "Used Correctly", status: false },
+        { q: "In Safe Conditions", status: false },
+
       ]
     },
     {
-      label: "Task and Procedure",
+      label: "Procedures",
+      icon: "document-text-outline",
       questions: [
-        { q: "Do I know what to do", status: false },
-        { q: "Do I have the right skills", status: false },
-        { q: "Is the procedure clear", status: false }
+        { q: "Available", status: false },
+        { q: "Adequate", status: false },
+        { q: "Known", status: false },
+        { q: "Understood", status: false },
+        { q: "Followed", status: false },
       ]
     },
     {
-      label: "People and Communication",
+      label: "Orderliness (Standards)",
+      icon: "library-outline",
       questions: [
-        { q: "Am I communicating clearly", status: false },
-        { q: "Is everyone aware of the task", status: false }
-      ]
-    },
-    {
-      label: "People and Communication",
-      questions: [
-        { q: "Am I communicating clearly", status: false },
-        { q: "Is everyone aware of the task", status: false }
-      ]
-    },
-    {
-      label: "People and Communication",
-      questions: [
-        { q: "Am I communicating clearly", status: false },
-        { q: "Is everyone aware of the task", status: false }
-      ]
-    },
-    {
-      label: "People and Communication",
-      questions: [
-        { q: "Am I communicating clearly", status: false },
-        { q: "Is everyone aware of the task", status: false }
-      ]
-    },
-    {
-      label: "People and Communication",
-      questions: [
-        { q: "Am I communicating clearly", status: false },
-        { q: "Is everyone aware of the task", status: false }
+        { q: "Known", status: false },
+        { q: "Understood", status: false },
+        { q: "Followed", status: false },
       ]
     },
   ];
   const conditions = [
     {
       label: "Tools and Equipment",
+      icon: "build-outline",
       questions: [
         { q: "Right for the job", status: false },
         { q: "Is Safe Condition", status: false }
       ]
     },
     {
-      label: "Task and Procedure",
+      label: "Structures and Work Areas",
+      icon: "business-outline",
       questions: [
-        { q: "Do I know what to do", status: false },
-        { q: "Do I have the right skills", status: false },
-        { q: "Is the procedure clear", status: false }
+        { q: "Clean", status: false },
+        { q: "Orderly", status: false },
+        { q: "Right for the Job", status: false },
+        { q: "In Safe Condition", status: false },
+       
       ]
     },
     {
-      label: "People and Communication",
+      label: "Environment (Is It)",
+      icon: "earth-outline",
       questions: [
-        { q: "Am I communicating clearly", status: false },
-        { q: "Is everyone aware of the task", status: false }
+        { q: "Clean", status: false },
+        { q: "Orderly", status: false },
+        { q: "In Safe Condition", status: false },
       ]
     },
     {
-      label: "People and Communication",
+      label: "Orderliness (Standards)",
+      icon: "checkmark-done-outline",
       questions: [
-        { q: "Am I communicating clearly", status: false },
-        { q: "Is everyone aware of the task", status: false }
+        { q: "Available", status: false },
+        { q: "Adequate", status: false },
       ]
     },
-    {
-      label: "People and Communication",
-      questions: [
-        { q: "Am I communicating clearly", status: false },
-        { q: "Is everyone aware of the task", status: false }
-      ]
-    },
-    {
-      label: "People and Communication",
-      questions: [
-        { q: "Am I communicating clearly", status: false },
-        { q: "Is everyone aware of the task", status: false }
-      ]
-    },
-    {
-      label: "People and Communication",
-      questions: [
-        { q: "Am I communicating clearly", status: false },
-        { q: "Is everyone aware of the task", status: false }
-      ]
-    },
+
+
   ];
 
   // State to track status of all questions across actions and conditions
@@ -219,7 +228,7 @@ const StopCard = () => {
 
   const areAllActionsChecked = (itemIndex) => {
     const item = actions[itemIndex];
-    return item.questions.every((_, questionIndex) => 
+    return item.questions.every((_, questionIndex) =>
       actionStatus[`action_${itemIndex}_question_${questionIndex}`]
     );
   };
@@ -242,7 +251,7 @@ const StopCard = () => {
 
   const areAllConditionsChecked = (itemIndex) => {
     const item = conditions[itemIndex];
-    return item.questions.every((_, questionIndex) => 
+    return item.questions.every((_, questionIndex) =>
       conditionStatus[`condition_${itemIndex}_question_${questionIndex}`]
     );
   };
@@ -342,7 +351,7 @@ const StopCard = () => {
     // Calculate actions completion
     const totalActionQuestions = actions.reduce((total, item) => total + item.questions.length, 0);
     const completedActionQuestions = actions.reduce((total, item, itemIndex) => {
-      return total + item.questions.filter((_, questionIndex) => 
+      return total + item.questions.filter((_, questionIndex) =>
         actionStatus[`action_${itemIndex}_question_${questionIndex}`]
       ).length;
     }, 0);
@@ -350,7 +359,7 @@ const StopCard = () => {
     // Calculate conditions completion
     const totalConditionQuestions = conditions.reduce((total, item) => total + item.questions.length, 0);
     const completedConditionQuestions = conditions.reduce((total, item, itemIndex) => {
-      return total + item.questions.filter((_, questionIndex) => 
+      return total + item.questions.filter((_, questionIndex) =>
         conditionStatus[`condition_${itemIndex}_question_${questionIndex}`]
       ).length;
     }, 0);
@@ -374,8 +383,104 @@ const StopCard = () => {
     };
   };
 
+  // Function to send data to Google Sheets
+  const sendToGoogleSheets = async (reportData) => {
+    try {
+      // Google Apps Script Web App URL (you'll need to create this)
+      const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+      
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reportData),
+      });
+      
+      if (response.ok) {
+        return { success: true, message: 'Report sent successfully' };
+      } else {
+        throw new Error('Failed to send report');
+      }
+    } catch (error) {
+      console.error('Error sending to Google Sheets:', error);
+      return { success: false, message: error.message };
+    }
+  };
+
+  // Function to prepare data for Google Sheets
+  const prepareSheetData = () => {
+    const summary = calculateSummary();
+    const timestamp = new Date().toISOString();
+    const reportId = `STOP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Prepare safe acts list
+    const safeActsList = reportForm.safeActsObserved
+      .filter(act => act.trim() !== '')
+      .join(', ');
+    
+    // Prepare unsafe acts list  
+    const unsafeActsList = reportForm.unsafeActsObserved
+      .filter(act => act.trim() !== '')
+      .join(', ');
+    
+    // Prepare actions details
+    const actionsDetails = actions.map((item, itemIndex) => ({
+      category: item.label,
+      icon: item.icon,
+      questions: item.questions.map((question, questionIndex) => ({
+        question: question.q,
+        status: actionStatus[`action_${itemIndex}_question_${questionIndex}`] || false
+      }))
+    }));
+    
+    // Prepare conditions details
+    const conditionsDetails = conditions.map((item, itemIndex) => ({
+      category: item.label,
+      icon: item.icon, 
+      questions: item.questions.map((question, questionIndex) => ({
+        question: question.q,
+        status: conditionStatus[`condition_${itemIndex}_question_${questionIndex}`] || false
+      }))
+    }));
+
+    return {
+      // Basic info
+      timestamp,
+      reportId,
+      userEmail: 'user@company.com', // This should come from auth context
+      companyId: '30000', // This should come from auth context
+      
+      // Report form data
+      site: reportForm.site,
+      area: reportForm.area,
+      date: reportForm.date.toISOString().split('T')[0],
+      shift: reportForm.shift,
+      durationMinutes: parseInt(reportForm.duration) || 0,
+      peopleConducted: parseInt(reportForm.peopleConducted) || 0,
+      peopleObserved: parseInt(reportForm.peopleObserved) || 0,
+      
+      // Safety acts
+      safeActsCount: summary.safeActs,
+      safeActsList,
+      unsafeActsCount: summary.unsafeActs,
+      unsafeActsList,
+      
+      // Completion rates
+      actionsCompletion: summary.actions.percentage,
+      conditionsCompletion: summary.conditions.percentage,
+      
+      // Detailed data (JSON strings for Google Sheets)
+      actionsDetails: JSON.stringify(actionsDetails),
+      conditionsDetails: JSON.stringify(conditionsDetails),
+      
+      // User feedback
+      suggestions: reportForm.suggestions || ''
+    };
+  };
+
   // Function to log all status including report form
-  const logStatus = () => {
+  const logStatus = async () => {
     const completeReport = {
       timestamp: new Date().toISOString(),
       actions: actions.map((item, itemIndex) => ({
@@ -395,8 +500,39 @@ const StopCard = () => {
       reportForm: reportForm,
       summary: calculateSummary()
     };
+    
     console.log('Complete STOP Card Report:', completeReport);
-    setShowSummaryModal(true);
+    
+    // Prepare and send data to Google Sheets
+    const sheetData = prepareSheetData();
+    console.log('Google Sheets Data:', sheetData);
+    
+    // Send to Google Sheets
+    const result = await sendToGoogleSheets(sheetData);
+    
+    if (result.success) {
+      Alert.alert(
+        'Success!',
+        'Your STOP Card report has been submitted successfully.',
+        [
+          {
+            text: 'View Summary',
+            onPress: () => setShowSummaryModal(true)
+          }
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Submission Error',
+        `Failed to submit report: ${result.message}. Your data has been saved locally.`,
+        [
+          {
+            text: 'View Summary',
+            onPress: () => setShowSummaryModal(true)
+          }
+        ]
+      );
+    }
   };
 
 
@@ -412,7 +548,7 @@ const StopCard = () => {
 
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tab, activeTab === 'actions' && styles.activeTab]}
           onPress={() => setActiveTab('actions')}
         >
@@ -420,7 +556,7 @@ const StopCard = () => {
             Actions
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tab, activeTab === 'conditions' && styles.activeTab]}
           onPress={() => setActiveTab('conditions')}
         >
@@ -428,7 +564,7 @@ const StopCard = () => {
             Conditions
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tab, activeTab === 'report' && styles.activeTab]}
           onPress={() => setActiveTab('report')}
         >
@@ -448,7 +584,7 @@ const StopCard = () => {
           <View style={styles.gridContainer}>
             {actions.map((item, itemIndex) => (
               <View key={itemIndex} style={styles.gridItem}>
-                <ItemCheck 
+                <ItemCheck
                   item={item}
                   itemIndex={itemIndex}
                   type="action"
@@ -466,7 +602,7 @@ const StopCard = () => {
           <View style={styles.gridContainer}>
             {conditions.map((item, itemIndex) => (
               <View key={itemIndex} style={styles.gridItem}>
-                <ItemCheck 
+                <ItemCheck
                   item={item}
                   itemIndex={itemIndex}
                   type="condition"
@@ -482,7 +618,7 @@ const StopCard = () => {
 
         {activeTab === 'report' && (
           <View style={styles.formContainer}>
-            
+
             {/* Safe Acts Observed */}
             <View style={styles.inputGroup}>
               <View style={styles.labelWithButton}>
@@ -542,7 +678,7 @@ const StopCard = () => {
             {/* Date */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Date</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.datePickerButton}
                 onPress={() => setShowDatePicker(true)}
               >
@@ -551,7 +687,7 @@ const StopCard = () => {
                 </Text>
                 <Ionicons name="calendar-outline" size={20} color={colors.primary} />
               </TouchableOpacity>
-              
+
               {showDatePicker && (
                 <View style={styles.datePickerContainer}>
                   <View style={styles.datePickerHeader}>
@@ -564,7 +700,7 @@ const StopCard = () => {
                   </View>
                   <View style={styles.datePickerContent}>
                     <View style={styles.datePickerRow}>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.dateButton}
                         onPress={() => {
                           const newDate = new Date(reportForm.date);
@@ -577,7 +713,7 @@ const StopCard = () => {
                       <Text style={styles.currentDate}>
                         {reportForm.date.toLocaleDateString()}
                       </Text>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.dateButton}
                         onPress={() => {
                           const newDate = new Date(reportForm.date);
@@ -589,13 +725,13 @@ const StopCard = () => {
                       </TouchableOpacity>
                     </View>
                     <View style={styles.quickDateButtons}>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.quickButton}
                         onPress={() => updateReportForm('date', new Date())}
                       >
                         <Text style={styles.quickButtonText}>Today</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.quickButton}
                         onPress={() => {
                           const yesterday = new Date();
@@ -728,14 +864,14 @@ const StopCard = () => {
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>STOP Card Summary</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setShowSummaryModal(false)}
             >
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
-          
+
           <ScrollView style={styles.modalContent}>
             {(() => {
               const summary = calculateSummary();
@@ -750,7 +886,7 @@ const StopCard = () => {
                         <View style={styles.pieChart}>
                           <View style={[
                             styles.pieSlice,
-                            { 
+                            {
                               transform: [{ rotate: `${(summary.actions.percentage * 3.6)}deg` }],
                               backgroundColor: colors.success || '#30D158'
                             }
@@ -763,13 +899,13 @@ const StopCard = () => {
                           {summary.actions.completed}/{summary.actions.total} Complete
                         </Text>
                       </View>
-                      
+
                       <View style={styles.pieChartWrapper}>
                         <Text style={styles.chartTitle}>Conditions</Text>
                         <View style={styles.pieChart}>
                           <View style={[
                             styles.pieSlice,
-                            { 
+                            {
                               transform: [{ rotate: `${(summary.conditions.percentage * 3.6)}deg` }],
                               backgroundColor: colors.primary || '#FF9500'
                             }
@@ -794,7 +930,7 @@ const StopCard = () => {
                         <View style={styles.barBackground}>
                           <View style={[
                             styles.barFill,
-                            { 
+                            {
                               width: `${Math.min((summary.safeActs / Math.max(summary.safeActs, summary.unsafeActs, 1)) * 100, 100)}%`,
                               backgroundColor: colors.success || '#30D158'
                             }
@@ -802,13 +938,13 @@ const StopCard = () => {
                         </View>
                         <Text style={styles.barValue}>{summary.safeActs}</Text>
                       </View>
-                      
+
                       <View style={styles.barItem}>
                         <Text style={styles.barLabel}>Unsafe Acts</Text>
                         <View style={styles.barBackground}>
                           <View style={[
                             styles.barFill,
-                            { 
+                            {
                               width: `${Math.min((summary.unsafeActs / Math.max(summary.safeActs, summary.unsafeActs, 1)) * 100, 100)}%`,
                               backgroundColor: colors.error || '#FF3B30'
                             }
@@ -838,7 +974,7 @@ const StopCard = () => {
                     </View>
                   </View>
 
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.shareButton}
                     onPress={() => {
                       setShowSummaryModal(false);
@@ -863,7 +999,7 @@ export default StopCard;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff'||colors.primary || "#FF9500",
+    backgroundColor: '#fff' || colors.primary || "#FF9500",
   },
   scroll: {
     flexGrow: 1,
@@ -938,15 +1074,12 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginHorizontal: -5,
+    flexDirection: 'column',
+    paddingHorizontal: 10,
   },
   gridItem: {
-    width: '48%',
-    marginHorizontal: '1%',
-    marginBottom: 10,
+    width: '100%',
+    marginBottom: 12,
   },
   tabContainer: {
     flexDirection: 'row',
