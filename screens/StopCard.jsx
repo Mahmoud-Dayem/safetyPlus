@@ -39,7 +39,8 @@ const StopCard = () => {
     shift: 'General', // Default shift
     duration: '', // Duration in minutes
     peopleConducted: '',
-    peopleObserved: ''
+    peopleObserved: '',
+    suggestions: ''
   });
 
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -61,6 +62,22 @@ const StopCard = () => {
           <View style={styles.headerIconContainer}>
             <Ionicons name="clipboard-outline" size={24} color="#fff" />
           </View>
+        </View>
+      ),
+      headerRight: () => (
+        <View style={styles.headerRightContainer}>
+          <TouchableOpacity 
+            style={styles.logoutHeaderButton}
+            onPress={handleLogout}
+          >
+            <Ionicons name="log-out-outline" size={20} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.homeButton}
+            onPress={() => navigation.navigate('Home')}
+          >
+            <Ionicons name="home-outline" size={24} color="#fff" />
+          </TouchableOpacity>
         </View>
       ),
     });
@@ -299,6 +316,25 @@ const StopCard = () => {
         unsafeActsObserved: prev.unsafeActsObserved.filter((_, i) => i !== index)
       }));
     }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Confirm Logout',
+      'Are you sure you want to logout? Any unsaved changes will be lost.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: () => navigation.navigate('Auth'),
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   // Function to calculate summary statistics
@@ -660,6 +696,20 @@ const StopCard = () => {
               />
             </View>
 
+            {/* User Suggestions */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Suggestions for improvement</Text>
+              <TextInput
+                style={[styles.textInput, styles.multilineInput]}
+                value={reportForm.suggestions}
+                onChangeText={(text) => updateReportForm('suggestions', text)}
+                placeholder="Enter your suggestions for safety improvements, recommendations, or observations..."
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+
             <TouchableOpacity style={styles.logButton} onPress={logStatus}>
               <Text style={styles.logButtonText}>Send Report</Text>
             </TouchableOpacity>
@@ -837,6 +887,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 8,
   },
+  homeButton: {
+    marginRight: 15,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+  },
+  headerRightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  logoutHeaderButton: {
+    padding: 6,
+    borderRadius: 15,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+  },
   checkboxContainer: {
     flexDirection: 'row',
     marginBottom: 20,
@@ -884,30 +950,34 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor:'#fff'|| colors.primary || '#FF9500',
-    paddingHorizontal: 10,
-    paddingTop: 5,
+    backgroundColor: colors.primary || '#FF9500',
+    paddingHorizontal: 15,
+    paddingTop: 15,
+    paddingBottom: 5,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 15,
     paddingHorizontal: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    marginHorizontal: 5,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    marginHorizontal: 3,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   activeTab: {
-    backgroundColor: colors.primary ||colors.background || '#F8F9FA',
+    backgroundColor: colors.background || '#F8F9FA',
+    borderBottomWidth: 0,
   },
   tabText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FF9500'||'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   activeTabText: {
-    color:'rgba(255, 255, 255, 0.8)'|| colors.primary || '#FF9500',
+    color: colors.primary || '#FF9500',
   },
   formContainer: {
     padding: 15,
