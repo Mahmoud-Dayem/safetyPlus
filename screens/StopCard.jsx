@@ -49,7 +49,7 @@ const StopCard = () => {
     navigation.setOptions({
       title: "STOP Card",
       headerStyle: {
-        backgroundColor: colors.primary || "#34C759",
+        backgroundColor: colors.primary || "#FF9500",
       },
       headerTintColor: "#fff",
       headerTitleStyle: {
@@ -369,7 +369,9 @@ const StopCard = () => {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <StatusBar
         barStyle="light-content"
-        backgroundColor={colors.primary || "#FF3B30"}
+        backgroundColor={colors.primary || "#FF9500"}
+        translucent={false}
+        hidden={false}
       />
 
       {/* Tab Navigation */}
@@ -811,7 +813,7 @@ export default StopCard;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.primary || "#FF9500",
+    backgroundColor: '#fff'||colors.primary || "#FF9500",
   },
   scroll: {
     flexGrow: 1,
@@ -882,7 +884,7 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.primary || '#FF9500',
+    backgroundColor:'#fff'|| colors.primary || '#FF9500',
     paddingHorizontal: 10,
     paddingTop: 5,
   },
@@ -897,15 +899,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeTab: {
-    backgroundColor: colors.background || '#F8F9FA',
+    backgroundColor: colors.primary ||colors.background || '#F8F9FA',
   },
   tabText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#FF9500'||'rgba(255, 255, 255, 0.8)',
   },
   activeTabText: {
-    color: colors.primary || '#FF9500',
+    color:'rgba(255, 255, 255, 0.8)'|| colors.primary || '#FF9500',
   },
   formContainer: {
     padding: 15,

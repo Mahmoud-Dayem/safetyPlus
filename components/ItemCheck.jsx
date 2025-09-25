@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     container: {
         backgroundColor: '#fff',
         borderRadius: 8,
-        marginBottom: 20,
+        marginBottom: 10,
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
@@ -70,8 +70,8 @@ const styles = StyleSheet.create({
     },
     header: {
         backgroundColor: colors.primary,
-        paddingVertical: 6,
-        paddingHorizontal: 16,
+        paddingVertical: 1,
+        paddingHorizontal: 10,
         borderTopLeftRadius: 8,
         borderTopRightRadius: 8,
         flexDirection: 'column',
@@ -80,22 +80,23 @@ const styles = StyleSheet.create({
     allSafeRow: {
         flexDirection: 'row',
         alignItems: 'left',
-        marginBottom: 8,
+        marginBottom: 4,
     },
     headerCheckbox: {
         marginRight: 8,
        
     },
     allSafeText: {
-        fontSize: 14,
+        fontSize: 12,
         color: colors.headerTitle || '#fff',
         fontWeight: '600',
     },
     headerText: {
-        fontSize: 16,
+        fontSize: 14,
         color: colors.headerTitle || '#fff',
         fontWeight: 'bold',
         textAlign: 'left',
+        
     }
 });
 

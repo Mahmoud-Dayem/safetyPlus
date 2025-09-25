@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "safetyPlus",
-    "slug": "safetyPlus",
+    "name": "SafetyPlus",
+    "slug": "SafetyPlus",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/splash-icon-new.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
+      "image": "./assets/splash-icon-new.png",
+      "resizeMode": "cover",
       "backgroundColor": "#ffffff"
     },
     "ios": {
