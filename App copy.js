@@ -53,7 +53,7 @@ export function RootStack() {
     }
   };
     useEffect(() => {
-    // Auth state monitoring for development
+    // console.log('Auth state changed:', { isAuthenticated, hasUser: !!user });
   }, [isAuthenticated, user]);
   if (isLoading) {
     return (

@@ -2,12 +2,24 @@
 
 # dependencies
 node_modules/
-.env
+ 
 # Expo
 .expo/
 dist/
 web-build/
 expo-env.d.ts
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.staging
+
+# Build outputs
+*.aab
+*.apk
+*.ipa
+build/
 
 # Native
 .kotlin/
@@ -39,3 +51,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+# Environment variables
+.env
+.env.local
+.env.production
+.env.staging

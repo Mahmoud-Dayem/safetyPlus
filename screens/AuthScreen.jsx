@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+ import { login } from "../store/authSlice";
+import { storeUser } from "../helper/authStorage";
+import { useDispatch } from "react-redux";
 import {
   StyleSheet,
   Text,
@@ -8,12 +11,13 @@ import {
   StatusBar,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../constants/color';
 import { useNavigation } from '@react-navigation/native';
-
+import { signup, signin } from "../firebase/firebaseConfig";
 const AuthScreen = () => {
   const navigation = useNavigation();
   const [isLogin, setIsLogin] = useState(true); // Start with login mode
@@ -27,7 +31,8 @@ const AuthScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
-
+  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
   const updateFormData = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
@@ -81,30 +86,103 @@ const AuthScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (validateForm()) {
-      // Dummy login - navigate directly to home
-      navigation.navigate('Home');
+      setLoading(true);
+      const email = formData.email;
+      const password = formData.password;
+      const result = await signin({ email, password });
+      setLoading(false);
+      if (result.status === "ok") {
+        const user = {
+          uid: result.message.uid,
+          email: result.message.email,
+          token: result.message.accessToken,
+          displayName: result.message.displayName,
+          companyId: result.companyId,
+          isAdmin: result.isAdmin,
+          isPrivileged: result.isPrivileged,
+        };
+        // store user in async cached
+        storeUser(user);
+
+        // Navigate to home or update Redux state
+
+        const dispatchPayload = {
+          uid: result.message.uid,
+          email: result.message.email,
+          emailVerified: result.message.emailVerified,
+          displayName: result.message.displayName,
+          photoURL: result.message.photoURL,
+          token: result.message.accessToken,
+          companyId: result.companyId,
+          isAdmin: result.isAdmin,
+          isPrivileged: result.isPrivileged,
+        };
+
+        dispatch(login(dispatchPayload)); // result.message contains user object
+    
+      } else if (result.error && result.message.includes("user not found")) {
+        Alert.alert("User not found", "Please sign up first.");
+        setIsSignup(true);
+        setIsExistingUser(false);
+      } else {
+        Alert.alert("Login failed:", result.message);
+      }
+     
     }
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     if (validateForm()) {
-      // Dummy signup - navigate to home
-      Alert.alert(
-        'Success!',
-        `Welcome ${formData.name}! Your account has been created.`,
-        [
-          {
-            text: 'Continue',
-            onPress: () => navigation.navigate('Home')
-          }
-        ]
-      );
+      setLoading(true);
+      const email = formData.email;
+      const password = formData.password;
+      const displayName = formData.name;
+      const companyId = formData.companyId;
+
+      const result = await signup({ email, password, displayName, companyId })
+      setLoading(false);
+      if (result.status === "ok") {
+
+        const dispatchPayload = {
+          uid: result.message.uid,
+          email: result.message.email,
+          emailVerified: result.message.emailVerified,
+          displayName: result.message.displayName,
+          photoURL: result.message.photoURL,
+          token: result.message.accessToken,
+          isAdmin: false,
+          isPrivileged: false,
+          companyId
+        };
+
+
+
+        dispatch(login(dispatchPayload)); // result.message contains user object
+        // navigation.navigate("HomeTabs"); // Navigate to Home after login
+        Alert.alert(
+          'Success!',
+          `Welcome ${formData.name}! Your account has been created.`,
+          [
+            {
+              text: 'Continue',
+              
+            }
+          ]
+        );
+      } else if (result.error && result.message.includes("already in use")) {
+        Alert.alert("User already exists", "Please log in instead.");
+        setIsExistingUser(true);
+        setIsSignup(false);
+      } else {
+        Alert.alert("Signup failed:", result.message);
+      }
     }
   };
 
   const toggleAuthMode = () => {
+
     setIsLogin(!isLogin);
     setErrors({});
     // Clear form data when switching modes
@@ -123,6 +201,14 @@ const AuthScreen = () => {
     return numeric.slice(0, 5);
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar
@@ -134,10 +220,10 @@ const AuthScreen = () => {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Ionicons 
-            name="shield-checkmark" 
-            size={50} 
-            color="#FFFFFF" 
+          <Ionicons
+            name="shield-checkmark"
+            size={50}
+            color="#FFFFFF"
           />
           <Text style={styles.appTitle}>Safety Plus</Text>
           <Text style={styles.subtitle}>
@@ -147,7 +233,7 @@ const AuthScreen = () => {
 
         {/* Auth Form */}
         <View style={styles.formContainer}>
-          
+
           {/* Name Input - Only for Signup */}
           {!isLogin && (
             <View style={styles.inputGroup}>
@@ -202,10 +288,10 @@ const AuthScreen = () => {
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeIcon}
               >
-                <Ionicons 
-                  name={showPassword ? "eye-outline" : "eye-off-outline"} 
-                  size={20} 
-                  color={colors.textSecondary} 
+                <Ionicons
+                  name={showPassword ? "eye-outline" : "eye-off-outline"}
+                  size={20}
+                  color={colors.textSecondary}
                 />
               </TouchableOpacity>
             </View>
@@ -230,10 +316,10 @@ const AuthScreen = () => {
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   style={styles.eyeIcon}
                 >
-                  <Ionicons 
-                    name={showConfirmPassword ? "eye-outline" : "eye-off-outline"} 
-                    size={20} 
-                    color={colors.textSecondary} 
+                  <Ionicons
+                    name={showConfirmPassword ? "eye-outline" : "eye-off-outline"}
+                    size={20}
+                    color={colors.textSecondary}
                   />
                 </TouchableOpacity>
               </View>
@@ -262,7 +348,7 @@ const AuthScreen = () => {
           )}
 
           {/* Auth Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.authButton}
             onPress={isLogin ? handleLogin : handleSignup}
             activeOpacity={0.8}
@@ -428,6 +514,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     paddingHorizontal: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
 });
 

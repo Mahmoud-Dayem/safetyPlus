@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,33 +7,104 @@ import {
   StatusBar,
   ScrollView,
   Alert,
+  ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../constants/color';
 import { useNavigation } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
+import StopCardReportsService from '../firebase/stopCardReportsService';
 
 const ReportHistory = () => {
   const navigation = useNavigation();
+  const user = useSelector(state => state.auth.user);
+  const name = user?.displayName;
+  const id = user?.companyId;
+  
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Confirm Logout',
-      'Are you sure you want to logout? You will need to sign in again.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: () => navigation.navigate('Auth'),
-        },
-      ],
-      { cancelable: true }
-    );
+  useEffect(() => {
+    loadCachedReports();
+  }, [id]);
+
+  // Load reports from AsyncStorage cache
+  const loadCachedReports = async () => {
+    try {
+      if (id) {
+        const cacheKey = `reports_${id}`;
+        const cachedData = await AsyncStorage.getItem(cacheKey);
+        if (cachedData) {
+          const allReports = JSON.parse(cachedData);
+          setReports(allReports);
+        } else {
+          setReports([]); // No cached data
+        }
+      }
+    } catch (error) {
+      console.error('Error loading cached reports:', error);
+      setReports([]);
+    }
   };
+
+  // Fetch fresh reports from Firestore and cache them
+  const fetchReportsFromFirestore = async () => {
+    try {
+      setRefreshing(true);
+      if (id) {
+        const userReports = await StopCardReportsService.getUserReports(id, 200);
+      
+        
+        
+        // Cache the reports
+        const cacheKey = `reports_${id}`;
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(userReports));
+        
+        // Display reports
+        setReports(userReports);
+        
+        // Alert.alert('Success', `Loaded ${userReports.length} reports from cloud`);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to fetch reports from cloud. Please try again.');
+      console.error('Error fetching reports:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'N/A';
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+   
+
+  const renderReportCard = ({ item }) => (
+    <View style={styles.reportCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.siteContainer}>
+          <Text style={styles.siteLabel}>SITE</Text>
+          <Text style={styles.siteValue}>{item.siteInfo?.site || 'Unknown Site'}</Text>
+        </View>
+        <Text style={styles.dateText}>{item.siteInfo?.date }</Text>
+      </View>
+      <View style={styles.areaRow}>
+        <Text style={styles.areaLabel}>AREA</Text>
+        <Text style={styles.areaValue}>{item.siteInfo?.area || 'Unknown Area'}</Text>
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -52,13 +123,25 @@ const ReportHistory = () => {
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Report History</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Report History</Text>
+          <View style={styles.headerUserInfoRow}>
+            <Text style={styles.headerUserName}>{name || 'User'}</Text>
+            <Text style={styles.headerSeparator}>•</Text>
+            <Text style={styles.headerCompanyId}>ID: {id || 'N/A'}</Text>
+          </View>
+        </View>
         <View style={styles.headerRightContainer}>
           <TouchableOpacity 
-            style={styles.logoutHeaderButton}
-            onPress={handleLogout}
+            style={styles.refreshButton}
+            onPress={fetchReportsFromFirestore}
+            disabled={refreshing}
           >
-            <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+            <Ionicons 
+              name={refreshing ? "sync" : "cloud-download-outline"} 
+              size={24} 
+              color="#FFFFFF" 
+            />
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.homeButton}
@@ -70,49 +153,55 @@ const ReportHistory = () => {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Empty State */}
-        <View style={styles.emptyState}>
-          <Ionicons 
-            name="document-text-outline" 
-            size={80} 
-            color={colors.textSecondary || '#8E8E93'} 
-          />
-          <Text style={styles.emptyTitle}>No Reports Yet</Text>
-          <Text style={styles.emptySubtitle}>
-            Your safety observation reports will appear here after you submit them.
-          </Text>
-          
-          <TouchableOpacity 
-            style={styles.createFirstReportButton}
-            onPress={() => navigation.navigate('StopCard')}
-          >
-            <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
-            <Text style={styles.createFirstReportText}>Create Your First Report</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Create New Report Button */}
+        <TouchableOpacity 
+          style={styles.createButton}
+          onPress={() => navigation.navigate('StopCard')}
+        >
+          <Ionicons name="add-circle" size={24} color="#FFFFFF" />
+          <Text style={styles.createButtonText}>Create New Report</Text>
+        </TouchableOpacity>
 
-        {/* Future: Report List Will Go Here */}
-        <View style={styles.futureFeatureSection}>
-          <Text style={styles.futureTitle}>Coming Soon</Text>
-          <View style={styles.featureList}>
-            <View style={styles.featureItem}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-              <Text style={styles.featureText}>Search and filter reports</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-              <Text style={styles.featureText}>Export reports to PDF</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-              <Text style={styles.featureText}>Analytics and trends</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-              <Text style={styles.featureText}>Share reports with team</Text>
-            </View>
+        {/* Reports Count */}
+        <View style={styles.filterSection}>
+          <Text style={styles.sectionTitle}>My Reports</Text>
+          <View style={styles.countContainer}>
+            <Text style={styles.countText}>
+              {refreshing ? 'Syncing...' : `${reports.length} Report${reports.length !== 1 ? 's' : ''}`}
+            </Text>
           </View>
         </View>
+
+        {/* Refreshing Indicator */}
+        {refreshing && (
+          <View style={styles.refreshingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.refreshingText}>Fetching reports from cloud...</Text>
+          </View>
+        )}
+
+        {/* Reports List */}
+        {reports.length === 0 && !refreshing ? (
+          <View style={styles.emptyState}>
+            <Ionicons 
+              name="document-text-outline" 
+              size={80} 
+              color={colors.textSecondary || '#8E8E93'} 
+            />
+            <Text style={styles.emptyTitle}>No Reports Found</Text>
+            <Text style={styles.emptySubtitle}>
+              No safety reports found. Create your first report to get started!
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={reports}
+            renderItem={renderReportCard}
+            keyExtractor={(item) => item.id}
+            style={styles.reportsList}
+            scrollEnabled={false}
+          />
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -129,7 +218,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 20,
+    minHeight: 100,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -144,14 +234,43 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
+  headerTitleContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    textAlign: 'center',
-    flex: 1,
+    marginBottom: 4,
+  },
+  headerUserInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerUserName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  headerSeparator: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginHorizontal: 8,
+  },
+  headerCompanyId: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   homeButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  refreshButton: {
     padding: 8,
     borderRadius: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -159,15 +278,86 @@ const styles = StyleSheet.create({
   headerRightContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-  },
-  logoutHeaderButton: {
-    padding: 6,
-    borderRadius: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    gap: 8,
   },
   content: {
     flex: 1,
+  },
+  createButton: {
+    backgroundColor: colors.primary || '#FF9500',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  createButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  filterSection: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text || '#1C1C1E',
+    marginBottom: 15,
+  },
+  countContainer: {
+    backgroundColor: '#FFFFFF',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  countText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.primary || '#FF9500',
+  },
+  reportsList: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: colors.textSecondary || '#8E8E93',
+    marginTop: 12,
+  },
+  refreshingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginBottom: 15,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  refreshingText: {
+    fontSize: 16,
+    color: colors.primary || '#FF9500',
+    marginTop: 12,
+    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
@@ -190,52 +380,58 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 30,
   },
-  createFirstReportButton: {
-    backgroundColor: colors.primary || '#FF9500',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    gap: 8,
-  },
-  createFirstReportText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  futureFeatureSection: {
-    margin: 20,
+  reportCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 20,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  futureTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text || '#1C1C1E',
-    marginBottom: 15,
-    textAlign: 'center',
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  featureList: {
-    gap: 12,
-  },
-  featureItem: {
+  siteContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    flex: 1,
   },
-  featureText: {
-    fontSize: 15,
+  siteLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary || '#FF9500',
+    marginRight: 8,
+  },
+  siteValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
     color: colors.text || '#1C1C1E',
+    flex: 1,
+  },
+  dateText: {
+    fontSize: 14,
+    color: colors.textSecondary || '#8E8E93',
+  },
+  areaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  areaLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary || '#FF9500',
+    marginRight: 8,
+  },
+  areaValue: {
+    fontSize: 14,
+    color: colors.text || '#1C1C1E',
+    fontWeight: '500',
     flex: 1,
   },
 });

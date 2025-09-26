@@ -1,35 +1,42 @@
-import React, { useState, useLayoutEffect } from "react";
-import Slider from "@react-native-community/slider"; // make sure installed
+import React, { useState, useLayoutEffect, useMemo, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Checkbox from 'expo-checkbox';
-
+import Constants from 'expo-constants';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase/firebaseConfig';
 import {
   StyleSheet,
-  Switch,
   Text,
   View,
   TextInput,
-  Keyboard,
-  TouchableWithoutFeedback,
   ScrollView,
   TouchableOpacity,
   StatusBar,
   Modal,
-  Dimensions,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { colors } from "../constants/color";
 import { useNavigation } from "@react-navigation/native";
 import ItemCheck from "../components/ItemCheck";
+import { useSelector } from "react-redux";
 
 
 const StopCard = () => {
   const navigation = useNavigation();
-  const [accept, setAccept] = useState(false);
+  const user = useSelector(state=>state.auth.user)
   const [activeTab, setActiveTab] = useState('actions'); // 'actions', 'conditions', or 'report'
-
+  const name = user?.displayName;
+  const id = user?.companyId;
+  const site_list =[
+    "LimeStone Crusher& Storage",
+    "Additives Crusher & Storage",
+    "Corrective Crusher& Storage",
+    "Raw Mill & Feeding Area",
+    "kiln"
+ 
+  ]
   // Report form state
   const [reportForm, setReportForm] = useState({
     safeActsObserved: [''],
@@ -46,45 +53,51 @@ const StopCard = () => {
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [showSiteDropdown, setShowSiteDropdown] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+
+  const {
+    googleSheetsUrl
+  } = Constants.expoConfig.extra;
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: "STOP Card",
       headerStyle: {
         backgroundColor: colors.primary || "#FF9500",
+        height: 110, // Increased height for better spacing
       },
       headerTintColor: "#fff",
-      headerTitleStyle: {
-        fontSize: 18,
-        fontWeight: "600",
-      },
+      headerTitle: () => (
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerMainTitle}>STOP Card</Text>
+          <View style={styles.headerUserInfoRow}>
+            <Text style={styles.headerUserName}>{name || 'User'}</Text>
+            <Text style={styles.headerSeparator}>•</Text>
+            <Text style={styles.headerCompanyId}>ID: {id || 'N/A'}</Text>
+          </View>
+        </View>
+      ),
       headerLeft: () => (
         <View style={styles.headerLeft}>
           <View style={styles.headerIconContainer}>
-            <Ionicons name="clipboard-outline" size={24} color="#fff" />
+            <Ionicons name="clipboard-outline" size={28} color="#fff" />
           </View>
         </View>
       ),
       headerRight: () => (
         <View style={styles.headerRightContainer}>
           <TouchableOpacity
-            style={styles.logoutHeaderButton}
-            onPress={handleLogout}
-          >
-            <Ionicons name="log-out-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity
             style={styles.homeButton}
             onPress={() => navigation.navigate('Home')}
           >
-            <Ionicons name="home-outline" size={24} color="#fff" />
+            <Ionicons name="home-outline" size={26} color="#fff" />
           </TouchableOpacity>
         </View>
       ),
     });
-  }, [navigation]);
+  }, [navigation, name, id]);
 
-  const actions = [
+  const actions = useMemo(() => [
     {
       label: "Reactions of People",
       icon: "people-outline",
@@ -155,8 +168,8 @@ const StopCard = () => {
         { q: "Followed", status: false },
       ]
     },
-  ];
-  const conditions = [
+  ], []);
+  const conditions = useMemo(() => [
     {
       label: "Tools and Equipment",
       icon: "build-outline",
@@ -173,7 +186,7 @@ const StopCard = () => {
         { q: "Orderly", status: false },
         { q: "Right for the Job", status: false },
         { q: "In Safe Condition", status: false },
-       
+
       ]
     },
     {
@@ -193,12 +206,10 @@ const StopCard = () => {
         { q: "Adequate", status: false },
       ]
     },
-
-
-  ];
+  ], []);
 
   // State to track status of all questions across actions and conditions
-  const [actionStatus, setActionStatus] = useState(() => {
+  const initialActionStatus = useMemo(() => {
     const initialStatus = {};
     actions.forEach((item, itemIndex) => {
       item.questions.forEach((question, questionIndex) => {
@@ -206,9 +217,11 @@ const StopCard = () => {
       });
     });
     return initialStatus;
-  });
+  }, [actions]);
+  
+  const [actionStatus, setActionStatus] = useState(initialActionStatus);
 
-  const [conditionStatus, setConditionStatus] = useState(() => {
+  const initialConditionStatus = useMemo(() => {
     const initialStatus = {};
     conditions.forEach((item, itemIndex) => {
       item.questions.forEach((question, questionIndex) => {
@@ -216,98 +229,100 @@ const StopCard = () => {
       });
     });
     return initialStatus;
-  });
+  }, [conditions]);
+  
+  const [conditionStatus, setConditionStatus] = useState(initialConditionStatus);
 
   // Functions for Actions
-  const updateActionStatus = (itemIndex, questionIndex, status) => {
+  const updateActionStatus = useCallback((itemIndex, questionIndex, status) => {
     setActionStatus(prevStatus => ({
       ...prevStatus,
       [`action_${itemIndex}_question_${questionIndex}`]: status
     }));
-  };
+  }, []);
 
-  const areAllActionsChecked = (itemIndex) => {
+  const areAllActionsChecked = useCallback((itemIndex) => {
     const item = actions[itemIndex];
     return item.questions.every((_, questionIndex) =>
       actionStatus[`action_${itemIndex}_question_${questionIndex}`]
     );
-  };
+  }, [actions, actionStatus]);
 
-  const toggleAllActions = (itemIndex, status) => {
+  const toggleAllActions = useCallback((itemIndex, status) => {
     const updatedStatus = { ...actionStatus };
     actions[itemIndex].questions.forEach((_, questionIndex) => {
       updatedStatus[`action_${itemIndex}_question_${questionIndex}`] = status;
     });
     setActionStatus(updatedStatus);
-  };
+  }, [actions, actionStatus]);
 
   // Functions for Conditions
-  const updateConditionStatus = (itemIndex, questionIndex, status) => {
+  const updateConditionStatus = useCallback((itemIndex, questionIndex, status) => {
     setConditionStatus(prevStatus => ({
       ...prevStatus,
       [`condition_${itemIndex}_question_${questionIndex}`]: status
     }));
-  };
+  }, []);
 
-  const areAllConditionsChecked = (itemIndex) => {
+  const areAllConditionsChecked = useCallback((itemIndex) => {
     const item = conditions[itemIndex];
     return item.questions.every((_, questionIndex) =>
       conditionStatus[`condition_${itemIndex}_question_${questionIndex}`]
     );
-  };
+  }, [conditions, conditionStatus]);
 
-  const toggleAllConditions = (itemIndex, status) => {
+  const toggleAllConditions = useCallback((itemIndex, status) => {
     const updatedStatus = { ...conditionStatus };
     conditions[itemIndex].questions.forEach((_, questionIndex) => {
       updatedStatus[`condition_${itemIndex}_question_${questionIndex}`] = status;
     });
     setConditionStatus(updatedStatus);
-  };
+  }, [conditions, conditionStatus]);
 
   // Function to update report form
-  const updateReportForm = (field, value) => {
+  const updateReportForm = useCallback((field, value) => {
     setReportForm(prev => ({
       ...prev,
       [field]: value
     }));
-  };
+  }, []);
 
   // Function to handle numeric input validation
-  const handleNumericInput = (field, value) => {
+  const handleNumericInput = useCallback((field, value) => {
     // Remove any non-numeric characters
     const numericValue = value.replace(/[^0-9]/g, '');
     updateReportForm(field, numericValue);
-  };
+  }, [updateReportForm]);
 
-  const addSafeAct = () => {
+  const addSafeAct = useCallback(() => {
     setReportForm(prev => ({
       ...prev,
       safeActsObserved: [...prev.safeActsObserved, '']
     }));
-  };
+  }, []);
 
-  const addUnsafeAct = () => {
+  const addUnsafeAct = useCallback(() => {
     setReportForm(prev => ({
       ...prev,
       unsafeActsObserved: [...prev.unsafeActsObserved, '']
     }));
-  };
+  }, []);
 
-  const updateSafeAct = (index, value) => {
+  const updateSafeAct = useCallback((index, value) => {
     setReportForm(prev => {
       const newSafeActs = [...prev.safeActsObserved];
       newSafeActs[index] = value;
       return { ...prev, safeActsObserved: newSafeActs };
     });
-  };
+  }, []);
 
-  const updateUnsafeAct = (index, value) => {
+  const updateUnsafeAct = useCallback((index, value) => {
     setReportForm(prev => {
       const newUnsafeActs = [...prev.unsafeActsObserved];
       newUnsafeActs[index] = value;
       return { ...prev, unsafeActsObserved: newUnsafeActs };
     });
-  };
+  }, []);
 
   const removeSafeAct = (index) => {
     if (reportForm.safeActsObserved.length > 1) {
@@ -327,27 +342,10 @@ const StopCard = () => {
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Confirm Logout',
-      'Are you sure you want to logout? Any unsaved changes will be lost.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: () => navigation.navigate('Auth'),
-        },
-      ],
-      { cancelable: true }
-    );
-  };
+   
 
   // Function to calculate summary statistics
-  const calculateSummary = () => {
+  const calculateSummary = useCallback(() => {
     // Calculate actions completion
     const totalActionQuestions = actions.reduce((total, item) => total + item.questions.length, 0);
     const completedActionQuestions = actions.reduce((total, item, itemIndex) => {
@@ -381,14 +379,15 @@ const StopCard = () => {
       peopleConducted: parseInt(reportForm.peopleConducted) || 0,
       peopleObserved: parseInt(reportForm.peopleObserved) || 0
     };
-  };
+  }, [actions, conditions, actionStatus, conditionStatus, reportForm]);
 
   // Function to send data to Google Sheets
   const sendToGoogleSheets = async (reportData) => {
     try {
-      // Google Apps Script Web App URL (you'll need to create this)
-      const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzjBGKmouAyqi5clZBBPWwzBqHa6hUtYV89190xVdKxNv1DVXN-26GeZ8ewkp9kc-FY/exec';
-      
+      const GOOGLE_SCRIPT_URL = googleSheetsUrl;
+      if (!GOOGLE_SCRIPT_URL) {
+        throw new Error('Google Sheets URL not configured');
+      }
       const response = await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         headers: {
@@ -396,34 +395,123 @@ const StopCard = () => {
         },
         body: JSON.stringify(reportData),
       });
-      
+
       if (response.ok) {
         return { success: true, message: 'Report sent successfully' };
       } else {
         throw new Error('Failed to send report');
       }
     } catch (error) {
-      console.error('Error sending to Google Sheets:', error);
       return { success: false, message: error.message };
     }
   };
 
+  // Function to send data to Firestore
+  const sendToFirestore = async (reportData) => {
+    try {
+      const docRef = await addDoc(collection(db, 'stopCardReports'), {
+        // Basic Info
+        reportId: reportData.reportId,
+        timestamp: serverTimestamp(),
+        submittedAt: new Date().toISOString(),
+        
+        // User Info
+        userInfo: {
+          email: user?.email || 'unknown@company.com',
+          displayName: name || 'Unknown User',
+          companyId: id || 'unknown',
+          uid: user?.uid || 'unknown'
+        },
+        
+        // Report Form Data
+        siteInfo: {
+          site: reportData.site,
+          area: reportData.area,
+          date: reportData.date,
+          shift: reportData.shift
+        },
+        
+        // Observation Data
+        observationData: {
+          durationMinutes: reportData.durationMinutes,
+          peopleConducted: reportData.peopleConducted,
+          peopleObserved: reportData.peopleObserved
+        },
+        
+        // Safety Acts
+        safetyActs: {
+          safeActsCount: reportData.safeActsCount,
+          safeActsList: reportForm.safeActsObserved.filter(act => act.trim() !== ''),
+          unsafeActsCount: reportData.unsafeActsCount,
+          unsafeActsList: reportForm.unsafeActsObserved.filter(act => act.trim() !== '')
+        },
+        
+        // Completion Rates
+        completionRates: {
+          actionsCompletion: reportData.actionsCompletion,
+          conditionsCompletion: reportData.conditionsCompletion
+        },
+        
+        // Detailed Assessment Data
+        assessmentData: {
+          actions: actions.map((item, itemIndex) => ({
+            category: item.label,
+            questions: item.questions.map((question, questionIndex) => ({
+              question: question.q,
+              status: actionStatus[`action_${itemIndex}_question_${questionIndex}`] || false
+            }))
+          })),
+          conditions: conditions.map((item, itemIndex) => ({
+            category: item.label,
+            questions: item.questions.map((question, questionIndex) => ({
+              question: question.q,
+              status: conditionStatus[`condition_${itemIndex}_question_${questionIndex}`] || false
+            }))
+          }))
+        },
+        
+        // User Feedback
+        feedback: {
+          suggestions: reportData.suggestions || ''
+        },
+        
+        // Metadata
+        metadata: {
+          appVersion: '1.0.0',
+          platform: 'mobile',
+          submissionMethod: 'stopcard_form'
+        }
+      });
+      
+      return { 
+        success: true, 
+        message: 'Data saved to Firestore successfully',
+        documentId: docRef.id 
+      };
+    } catch (error) {
+      return { 
+        success: false, 
+        message: `Firestore error: ${error.message}` 
+      };
+    }
+  };
+
   // Function to prepare data for Google Sheets
-  const prepareSheetData = () => {
+  const prepareSheetData = useCallback(() => {
     const summary = calculateSummary();
     const timestamp = new Date().toISOString();
     const reportId = `STOP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Prepare safe acts list
     const safeActsList = reportForm.safeActsObserved
       .filter(act => act.trim() !== '')
       .join(', ');
-    
+
     // Prepare unsafe acts list  
     const unsafeActsList = reportForm.unsafeActsObserved
       .filter(act => act.trim() !== '')
       .join(', ');
-    
+
     // Prepare actions details
     const actionsDetails = actions.map((item, itemIndex) => ({
       category: item.label,
@@ -433,11 +521,11 @@ const StopCard = () => {
         status: actionStatus[`action_${itemIndex}_question_${questionIndex}`] || false
       }))
     }));
-    
+
     // Prepare conditions details
     const conditionsDetails = conditions.map((item, itemIndex) => ({
       category: item.label,
-      icon: item.icon, 
+      icon: item.icon,
       questions: item.questions.map((question, questionIndex) => ({
         question: question.q,
         status: conditionStatus[`condition_${itemIndex}_question_${questionIndex}`] || false
@@ -448,9 +536,9 @@ const StopCard = () => {
       // Basic info
       timestamp,
       reportId,
-      userEmail: 'user@company.com', // This should come from auth context
-      companyId: '30000', // This should come from auth context
-      
+      userEmail: user?.email || 'unknown@company.com',
+      companyId: user?.companyId || id || 'unknown',
+
       // Report form data
       site: reportForm.site,
       area: reportForm.area,
@@ -459,72 +547,168 @@ const StopCard = () => {
       durationMinutes: parseInt(reportForm.duration) || 0,
       peopleConducted: parseInt(reportForm.peopleConducted) || 0,
       peopleObserved: parseInt(reportForm.peopleObserved) || 0,
-      
+
       // Safety acts
       safeActsCount: summary.safeActs,
       safeActsList,
       unsafeActsCount: summary.unsafeActs,
       unsafeActsList,
-      
+
       // Completion rates
       actionsCompletion: summary.actions.percentage,
       conditionsCompletion: summary.conditions.percentage,
-      
+
       // Detailed data (JSON strings for Google Sheets)
       actionsDetails: JSON.stringify(actionsDetails),
       conditionsDetails: JSON.stringify(conditionsDetails),
-      
+
       // User feedback
       suggestions: reportForm.suggestions || ''
     };
+  }, [actions, conditions, actionStatus, conditionStatus, reportForm, calculateSummary]);
+
+  // Validation function for report form
+  const validateReportForm = () => {
+    const errors = [];
+    
+    // Calculate actions completion percentage
+    const totalActionQuestions = actions.reduce((total, item) => total + item.questions.length, 0);
+    const completedActionQuestions = actions.reduce((total, item, itemIndex) => {
+      return total + item.questions.filter((_, questionIndex) =>
+        actionStatus[`action_${itemIndex}_question_${questionIndex}`]
+      ).length;
+    }, 0);
+    const actionsCompletionRate = totalActionQuestions > 0 ? (completedActionQuestions / totalActionQuestions) * 100 : 0;
+    
+    // Calculate conditions completion percentage
+    const totalConditionQuestions = conditions.reduce((total, item) => total + item.questions.length, 0);
+    const completedConditionQuestions = conditions.reduce((total, item, itemIndex) => {
+      return total + item.questions.filter((_, questionIndex) =>
+        conditionStatus[`condition_${itemIndex}_question_${questionIndex}`]
+      ).length;
+    }, 0);
+    const conditionsCompletionRate = totalConditionQuestions > 0 ? (completedConditionQuestions / totalConditionQuestions) * 100 : 0;
+    
+    // Check actions completion (must be at least 50%)
+    if (actionsCompletionRate < 50) {
+      errors.push(`Actions completion must be at least 50% (currently ${Math.round(actionsCompletionRate)}%)`);
+    }
+    
+    // Check conditions completion (must be at least 50%)
+    if (conditionsCompletionRate < 50) {
+      errors.push(`Conditions completion must be at least 50% (currently ${Math.round(conditionsCompletionRate)}%)`);
+    }
+    
+    // Check safe acts observed (at least one non-empty)
+    const hasValidSafeActs = reportForm.safeActsObserved.some(act => act.trim() !== '');
+    if (!hasValidSafeActs) {
+      errors.push('At least one safe act must be observed');
+    }
+    
+    // Check unsafe acts observed (at least one non-empty)
+    const hasValidUnsafeActs = reportForm.unsafeActsObserved.some(act => act.trim() !== '');
+    if (!hasValidUnsafeActs) {
+      errors.push('At least one unsafe act must be observed');
+    }
+    
+    // Check required fields
+    if (!reportForm.site.trim()) {
+      errors.push('Site is required');
+    }
+    
+    if (!reportForm.area.trim()) {
+      errors.push('Area is required');
+    }
+    
+    if (!reportForm.duration.trim()) {
+      errors.push('Duration is required');
+    }
+    
+    if (!reportForm.peopleConducted.trim()) {
+      errors.push('Number of people conducted is required');
+    }
+    
+    if (!reportForm.peopleObserved.trim()) {
+      errors.push('Number of people observed is required');
+    }
+    
+    // if (!reportForm.suggestions.trim()) {
+    //   errors.push('Suggestions for improvement are required');
+    // }
+    
+    return errors;
   };
 
   // Function to log all status including report form
   const logStatus = async () => {
-    const completeReport = {
-      timestamp: new Date().toISOString(),
-      actions: actions.map((item, itemIndex) => ({
-        category: item.label,
-        questions: item.questions.map((question, questionIndex) => ({
-          question: question.q,
-          status: actionStatus[`action_${itemIndex}_question_${questionIndex}`]
-        }))
-      })),
-      conditions: conditions.map((item, itemIndex) => ({
-        category: item.label,
-        questions: item.questions.map((question, questionIndex) => ({
-          question: question.q,
-          status: conditionStatus[`condition_${itemIndex}_question_${questionIndex}`]
-        }))
-      })),
-      reportForm: reportForm,
-      summary: calculateSummary()
-    };
+    // Prevent double submission
+    if (isSending) return;
     
-    console.log('Complete STOP Card Report:', completeReport);
-    
-    // Prepare and send data to Google Sheets
-    const sheetData = prepareSheetData();
-    console.log('Google Sheets Data:', sheetData);
-    
-    // Send to Google Sheets
-    const result = await sendToGoogleSheets(sheetData);
-    
-    if (result.success) {
+    // Validate report form
+    const validationErrors = validateReportForm();
+    if (validationErrors.length > 0) {
       Alert.alert(
-        'Success!',
-        'Your STOP Card report has been submitted successfully.',
-        [
-          {
-            text: 'View Summary',
-            onPress: () => setShowSummaryModal(true)
-          }
-        ]
+        'Incomplete Form', 
+        `Please fill in all required fields:\n\n• ${validationErrors.join('\n• ')}`,
+        [{ text: 'OK' }]
       );
+      return;
+    }
+    
+    setIsSending(true);
+    
+    try {
+      const completeReport = {
+        timestamp: new Date().toISOString(),
+        actions: actions.map((item, itemIndex) => ({
+          category: item.label,
+          questions: item.questions.map((question, questionIndex) => ({
+            question: question.q,
+            status: actionStatus[`action_${itemIndex}_question_${questionIndex}`]
+          }))
+        })),
+        conditions: conditions.map((item, itemIndex) => ({
+          category: item.label,
+          questions: item.questions.map((question, questionIndex) => ({
+            question: question.q,
+            status: conditionStatus[`condition_${itemIndex}_question_${questionIndex}`]
+          }))
+        })),
+        reportForm: reportForm,
+        summary: calculateSummary()
+      };
+
+      // Prepare data for both storage systems
+      const sheetData = prepareSheetData();
+      
+      // Send to both Google Sheets and Firestore simultaneously
+      const [sheetsResult, firestoreResult] = await Promise.allSettled([
+        sendToGoogleSheets(sheetData),
+        sendToFirestore(sheetData)
+      ]);
+    
+    // Determine overall success
+    const sheetsSuccess = sheetsResult.status === 'fulfilled' && sheetsResult.value.success;
+    const firestoreSuccess = firestoreResult.status === 'fulfilled' && firestoreResult.value.success;
+    
+    let alertTitle, alertMessage;
+    
+    if (sheetsSuccess && firestoreSuccess) {
+      alertTitle = 'Success!';
+      alertMessage = 'Your STOP Card report has been submitted successfully to both Google Sheets and Firestore database.';
+    } else if (sheetsSuccess || firestoreSuccess) {
+      alertTitle = 'Partial Success';
+      const successfulSystem = sheetsSuccess ? 'Google Sheets' : 'Firestore database';
+      const failedSystem = sheetsSuccess ? 'Firestore' : 'Google Sheets';
+      alertMessage = `Report saved to ${successfulSystem} successfully, but failed to save to ${failedSystem}. Your data is secure.`;
     } else {
+      alertTitle = 'Submission Error';
+      alertMessage = 'Failed to submit report to both systems. Please check your internet connection and try again.';
+    }
+    
       Alert.alert(
-        'Submission Error',
-        `Failed to submit report: ${result.message}. Your data has been saved locally.`,
+        alertTitle,
+        alertMessage,
         [
           {
             text: 'View Summary',
@@ -532,6 +716,19 @@ const StopCard = () => {
           }
         ]
       );
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        'An unexpected error occurred while sending the report. Please try again.',
+        [
+          {
+            text: 'OK',
+            onPress: () => setShowSummaryModal(true)
+          }
+        ]
+      );
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -575,7 +772,9 @@ const StopCard = () => {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled={true}
         scrollEventThrottle={16}
@@ -750,12 +949,15 @@ const StopCard = () => {
             {/* Site */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Site</Text>
-              <TextInput
-                style={styles.textInput}
-                value={reportForm.site}
-                onChangeText={(text) => updateReportForm('site', text)}
-                placeholder="Enter site"
-              />
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setShowSiteDropdown(true)}
+              >
+                <Text style={[styles.dropdownButtonText, !reportForm.site && styles.placeholderText]}>
+                  {reportForm.site || "Select site"}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={colors.textSecondary || '#8E8E93'} />
+              </TouchableOpacity>
             </View>
 
             {/* Area */}
@@ -846,8 +1048,19 @@ const StopCard = () => {
               />
             </View>
 
-            <TouchableOpacity style={styles.logButton} onPress={logStatus}>
-              <Text style={styles.logButtonText}>Send Report</Text>
+            <TouchableOpacity 
+              style={[styles.logButton, isSending && styles.logButtonDisabled]} 
+              onPress={logStatus}
+              disabled={isSending}
+            >
+              {isSending ? (
+                <View style={styles.sendingContainer}>
+                  <ActivityIndicator size="small" color="#FFFFFF" style={styles.sendingSpinner} />
+                  <Text style={styles.logButtonText}>Sending...</Text>
+                </View>
+              ) : (
+                <Text style={styles.logButtonText}>Send Report</Text>
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -977,12 +1190,13 @@ const StopCard = () => {
                   <TouchableOpacity
                     style={styles.shareButton}
                     onPress={() => {
-                      setShowSummaryModal(false);
+                      // setShowSummaryModal(false);
+                      navigation.navigate('Home')
                       // Here you could add share functionality
                     }}
                   >
                     <Ionicons name="share-outline" size={20} color="#FFFFFF" />
-                    <Text style={styles.shareButtonText}>Share Report</Text>
+                    <Text style={styles.shareButtonText}>Home</Text>
                   </TouchableOpacity>
                 </View>
               );
@@ -990,38 +1204,117 @@ const StopCard = () => {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      {/* Site Dropdown Modal */}
+      <Modal
+        visible={showSiteDropdown}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowSiteDropdown(false)}
+      >
+        <View style={styles.dropdownOverlay}>
+          <View style={styles.dropdownModal}>
+            <View style={styles.dropdownHeader}>
+              <Text style={styles.dropdownTitle}>Select Site</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowSiteDropdown(false)}
+              >
+                <Ionicons name="close" size={24} color={colors.text || '#1C1C1E'} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.dropdownList}>
+              {site_list.map((site, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.dropdownItem,
+                    reportForm.site === site && styles.selectedDropdownItem
+                  ]}
+                  onPress={() => {
+                    updateReportForm('site', site);
+                    setShowSiteDropdown(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.dropdownItemText,
+                    reportForm.site === site && styles.selectedDropdownItemText
+                  ]}>
+                    {site}
+                  </Text>
+                  {reportForm.site === site && (
+                    <Ionicons name="checkmark" size={20} color={colors.primary || '#FF9500'} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
-
-export default StopCard;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff' || colors.primary || "#FF9500",
   },
-  scroll: {
+  scrollView: {
+    flex: 1,
+    backgroundColor: colors.background || "#F8F9FA",
+  },
+  scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 10,
     paddingTop: 10,
     paddingBottom: 40,
     backgroundColor: colors.background || "#F8F9FA",
-    marginTop: 0,
+  },
+  headerTitleContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  headerMainTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  headerUserInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerUserName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  headerSeparator: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginHorizontal: 8,
+  },
+  headerCompanyId: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    marginLeft: 15,
+    marginLeft: 20,
   },
   headerIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
   },
   homeButton: {
     marginRight: 15,
@@ -1054,11 +1347,25 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 20,
     alignItems: 'center',
+    minHeight: 50,
+    justifyContent: 'center',
+  },
+  logButtonDisabled: {
+    backgroundColor: colors.textSecondary || '#8E8E93',
+    opacity: 0.7,
   },
   logButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  sendingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendingSpinner: {
+    marginRight: 10,
   },
   conditionsTitle: {
     fontSize: 32,
@@ -1090,8 +1397,8 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     marginHorizontal: 3,
     borderTopLeftRadius: 12,
@@ -1105,7 +1412,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   tabText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.8)',
   },
@@ -1443,5 +1750,86 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerUserCompact: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    opacity: 0.9,
+  },
+  
+  // Dropdown Styles
+  dropdownButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dropdownButtonText: {
+    fontSize: 16,
+    color: colors.text || '#1C1C1E',
+  },
+  placeholderText: {
+    color: colors.textSecondary || '#8E8E93',
+  },
+  dropdownOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownModal: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginHorizontal: 20,
+    maxHeight: '70%',
+    width: '90%',
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  dropdownTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text || '#1C1C1E',
+  },
+  closeButton: {
+    padding: 5,
+  },
+  dropdownList: {
+    maxHeight: 400,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  selectedDropdownItem: {
+    backgroundColor: '#F0F8FF',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: colors.text || '#1C1C1E',
+    flex: 1,
+  },
+  selectedDropdownItemText: {
+    color: colors.primary || '#FF9500',
+    fontWeight: '600',
+  },
 
 });
+
+export default StopCard;

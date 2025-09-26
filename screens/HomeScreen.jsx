@@ -7,13 +7,21 @@ import {
   StatusBar,
   Alert,
 } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import { getUser, removeUser } from "../helper/authStorage";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../constants/color';
 import { useNavigation } from '@react-navigation/native';
+import { logout, saveUser } from '../store/authSlice';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
+  const dispatch = useDispatch();
+  const user = useSelector((state) => state.auth.user);
+  const name = user?.displayName;
+  const id = user?.companyId;
+
 
   const navigateToStopCard = () => {
     navigation.navigate('StopCard');
@@ -31,7 +39,20 @@ const HomeScreen = () => {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: () => navigation.navigate('Auth'),
+          onPress: async () => {
+            try {
+              // Clear AsyncStorage
+              dispatch(logout());
+              await removeUser();
+
+              // Navigate to Auth screen and reset stack
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Auth' }],
+              });
+            } catch (error) {
+            }
+          },
         },
       ],
       { cancelable: true }
@@ -42,71 +63,85 @@ const HomeScreen = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="#FFFFFF"
+        backgroundColor= '#FF9500' 
         translucent={false}
         hidden={false}
       />
-      
+      {/* <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.primary || '#FF9500'}
+        translucent={false}
+        hidden={false}
+      /> */}
+
       <View style={styles.content}>
         <View style={styles.headerSection}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.logoutButton}
             onPress={handleLogout}
           >
             <Ionicons name="log-out-outline" size={20} color={colors.primary || '#FF9500'} />
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
-          <Ionicons 
-            name="shield-checkmark" 
-            size={80} 
-            color={colors.primary || '#FF9500'} 
+
+          {/* Compact User Info */}
+          <View style={styles.compactUserInfo}>
+            <Text style={styles.welcomeText}>Welcome back!</Text>
+            <Text style={styles.userNameCompact}>{name}</Text>
+            <Text style={styles.companyIdCompact}>ID: {id}</Text>
+          </View>
+
+          <Ionicons
+            name="shield-checkmark"
+            size={70}
+            color={colors.primary || '#FF9500'}
           />
           <Text style={styles.appTitle}>Safety Plus</Text>
           <Text style={styles.subtitle}>Workplace Safety Management</Text>
         </View>
 
         <View style={styles.buttonSection}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.stopCardButton}
             onPress={navigateToStopCard}
             activeOpacity={0.8}
           >
-            <Ionicons 
-              name="clipboard-outline" 
-              size={28} 
-              color="#FFFFFF" 
+            <Ionicons
+              name="clipboard-outline"
+              size={28}
+              color="#FFFFFF"
               style={styles.buttonIcon}
             />
             <View style={styles.buttonTextContainer}>
               <Text style={styles.buttonTitle}>Start STOP Card</Text>
               <Text style={styles.buttonSubtitle}>Safety Task Observation Program</Text>
             </View>
-            <Ionicons 
-              name="chevron-forward" 
-              size={24} 
-              color="#FFFFFF" 
+            <Ionicons
+              name="chevron-forward"
+              size={24}
+              color="#FFFFFF"
             />
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.reportsButton}
             onPress={() => navigation.navigate('ReportHistory')}
             activeOpacity={0.8}
           >
-            <Ionicons 
-              name="document-text-outline" 
-              size={28} 
-              color={colors.primary || '#FF9500'} 
+            <Ionicons
+              name="document-text-outline"
+              size={28}
+              color={colors.primary || '#FF9500'}
               style={styles.buttonIcon}
             />
             <View style={styles.buttonTextContainer}>
               <Text style={styles.reportsButtonTitle}>View Report History</Text>
               <Text style={styles.reportsButtonSubtitle}>Review past safety observations</Text>
             </View>
-            <Ionicons 
-              name="chevron-forward" 
-              size={24} 
-              color={colors.primary || '#FF9500'} 
+            <Ionicons
+              name="chevron-forward"
+              size={24}
+              color={colors.primary || '#FF9500'}
             />
           </TouchableOpacity>
         </View>
@@ -201,7 +236,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     position: 'absolute',
     top: 10,
-    right: 20,
+    right: 10,
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
@@ -247,6 +282,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary || '#8E8E93',
     marginTop: 2,
+  },
+  compactUserInfo: {
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  welcomeText: {
+    fontSize: 16,
+    color: colors.textSecondary || '#8E8E93',
+    marginBottom: 4,
+  },
+  userNameCompact: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text || '#1C1C1E',
+    marginBottom: 2,
+  },
+  companyIdCompact: {
+    fontSize: 14,
+    color: colors.primary || '#FF9500',
+    fontWeight: '600',
+    backgroundColor: '#FFF3E6',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
 });
 
