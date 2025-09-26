@@ -387,7 +387,7 @@ const StopCard = () => {
   const sendToGoogleSheets = async (reportData) => {
     try {
       // Google Apps Script Web App URL (you'll need to create this)
-      const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+      const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzjBGKmouAyqi5clZBBPWwzBqHa6hUtYV89190xVdKxNv1DVXN-26GeZ8ewkp9kc-FY/exec';
       
       const response = await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',

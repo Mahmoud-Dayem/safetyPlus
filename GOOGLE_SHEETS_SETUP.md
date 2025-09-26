@@ -7,6 +7,7 @@
 4. Copy the spreadsheet ID from the URL (the long string between `/d/` and `/edit`)
    - Example: `https://docs.google.com/spreadsheets/d/1ABC123XYZ456/edit#gid=0`
    - The ID is: `1ABC123XYZ456`
+   1IVnqXBvbPwMedpVgRHa-BYOcGowm3ajh6wQNEcE4WgU
 
 ## Step 2: Set Up Google Apps Script
 1. Go to [Google Apps Script](https://script.google.com)
