@@ -18,9 +18,11 @@ export default {
         ios: {
             supportsTablet: true,
             bundleIdentifier: "com.safetyplus.app",
-            buildNumber: "1"
+            buildNumber: "1",
+            icon: "./assets/splash-icon-new.png",
         },
         android: {
+             
             adaptiveIcon: {
                 foregroundImage: "./assets/adaptive-icon.png",
                 backgroundColor: "#ffffff"
@@ -44,6 +46,9 @@ export default {
             ]
         ],
         extra: {
+             eas : {
+                 projectId : "18af1a55-bfd0-4a6c-bfc4-a7b373329e56"
+            },
             // These will be available in your app via expo-constants
             googleSheetsUrl: process.env.GOOGLE_SHEETS_URL,
             apiBaseUrl: process.env.API_BASE_URL,
