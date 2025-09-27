@@ -189,17 +189,23 @@ async function saveStopCardToFirestore(stopCardData) {
             console.warn('Could not read user profile for companyId (continuing with default):', profileErr?.message || profileErr);
         }
         
-        // Generate report ID
-        const reportId = 'WEB_' + Date.now();
+    // Generate report ID (match style but platform noted in metadata)
+    const reportId = 'STOP_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         
-        // Calculate completion rates
-        const totalActions = Object.keys(stopCardData.actions || {}).length;
-        const completedActions = Object.values(stopCardData.actions || {}).filter(Boolean).length;
-        const actionsCompletion = totalActions > 0 ? (completedActions / totalActions * 100).toFixed(1) : 0;
-        
-        const totalConditions = Object.keys(stopCardData.conditions || {}).length;
-        const completedConditions = Object.values(stopCardData.conditions || {}).filter(Boolean).length;
-        const conditionsCompletion = totalConditions > 0 ? (completedConditions / totalConditions * 100).toFixed(1) : 0;
+    // Calculate completion rates based on assessmentData when available (preferred)
+    const actionsSections = stopCardData.assessmentData?.actions || [];
+    const conditionsSections = stopCardData.assessmentData?.conditions || [];
+
+    const countChecked = (sections) => sections.reduce((acc, sec) => acc + (sec.questions?.filter(q => q.status).length || 0), 0);
+    const countTotal = (sections) => sections.reduce((acc, sec) => acc + (sec.questions?.length || 0), 0);
+
+    const actionsTotalQ = countTotal(actionsSections) || Object.keys(stopCardData.actions || {}).length;
+    const actionsCheckedQ = countChecked(actionsSections) || Object.values(stopCardData.actions || {}).filter(Boolean).length;
+    const conditionsTotalQ = countTotal(conditionsSections) || Object.keys(stopCardData.conditions || {}).length;
+    const conditionsCheckedQ = countChecked(conditionsSections) || Object.values(stopCardData.conditions || {}).filter(Boolean).length;
+
+    const actionsCompletion = actionsTotalQ > 0 ? Math.round((actionsCheckedQ / actionsTotalQ) * 100) : 0;
+    const conditionsCompletion = conditionsTotalQ > 0 ? Math.round((conditionsCheckedQ / conditionsTotalQ) * 100) : 0;
         
         // Prepare document data using mobile app schema
         const reportData = {
@@ -216,51 +222,50 @@ async function saveStopCardToFirestore(stopCardData) {
                 uid: user.uid || 'unknown'
             },
             
-            // Report Form Data
+            // Report Form Data (match mobile field names)
             siteInfo: {
                 site: stopCardData.report?.site || '',
                 area: stopCardData.report?.area || '',
-                date: stopCardData.report?.date || new Date().toISOString(),
-                shift: 'General'
+                date: stopCardData.report?.date || new Date().toISOString().split('T')[0],
+                shift: stopCardData.report?.shift || 'General'
             },
             
             // Observation Data
             observationData: {
-                durationMinutes: stopCardData.report?.duration || 30,
-                peopleConducted: stopCardData.report?.peopleConducted || 1,
-                peopleObserved: stopCardData.report?.peopleObserved || 1
+                durationMinutes: parseInt(stopCardData.report?.duration || 0) || 0,
+                peopleConducted: parseInt(stopCardData.report?.peopleConducted || 0) || 0,
+                peopleObserved: parseInt(stopCardData.report?.peopleObserved || 0) || 0
             },
             
             // Safety Acts
             safetyActs: {
-                safeActsCount: completedActions,
-                safeActsList: [], // Web app doesn't have detailed safe acts list
-                unsafeActsCount: 0,
-                unsafeActsList: []
+                safeActsCount: (stopCardData.safetyActs?.safeActsList || []).filter(s => s && s.trim()).length,
+                safeActsList: stopCardData.safetyActs?.safeActsList || [],
+                unsafeActsCount: (stopCardData.safetyActs?.unsafeActsList || []).filter(s => s && s.trim()).length,
+                unsafeActsList: stopCardData.safetyActs?.unsafeActsList || []
             },
             
             // Completion Rates
             completionRates: {
-                actionsCompletion: parseFloat(actionsCompletion),
-                conditionsCompletion: parseFloat(conditionsCompletion)
+                actionsCompletion: actionsCompletion,
+                conditionsCompletion: conditionsCompletion
             },
             
             // Detailed Assessment Data (matching mobile structure)
             assessmentData: {
-                actions: Object.entries(stopCardData.actions || {}).map(([key, value]) => ({
-                    category: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                    questions: [{
-                        question: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                        status: Boolean(value)
-                    }]
-                })),
-                conditions: Object.entries(stopCardData.conditions || {}).map(([key, value]) => ({
-                    category: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                    questions: [{
-                        question: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                        status: Boolean(value)
-                    }]
-                }))
+                // Prefer pre-built structure from saveStopCardData(); otherwise fallback to deriving from raw maps
+                actions: (stopCardData.assessmentData?.actions && stopCardData.assessmentData.actions.length)
+                    ? stopCardData.assessmentData.actions
+                    : Object.entries(stopCardData.actions || {}).map(([key, value]) => ({
+                        category: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                        questions: [{ question: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), status: !!value }]
+                    })),
+                conditions: (stopCardData.assessmentData?.conditions && stopCardData.assessmentData.conditions.length)
+                    ? stopCardData.assessmentData.conditions
+                    : Object.entries(stopCardData.conditions || {}).map(([key, value]) => ({
+                        category: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                        questions: [{ question: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), status: !!value }]
+                    }))
             },
             
             // User Feedback

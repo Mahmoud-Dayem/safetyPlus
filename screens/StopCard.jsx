@@ -406,7 +406,7 @@ const StopCard = () => {
     }
   };
 
-  // Function to send data to Firestore
+  // Function to send data to Firestore mobile app
   const sendToFirestore = async (reportData) => {
     try {
       const docRef = await addDoc(collection(db, 'stopCardReports'), {

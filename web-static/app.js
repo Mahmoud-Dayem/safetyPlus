@@ -367,6 +367,61 @@ function saveStopCardData() {
             stopCardData.report[key] = input.value;
         }
     });
+
+    // Also capture Safe/Unsafe acts and suggestions (these inputs don't use the report- prefix)
+    try {
+        const safeActsEl = document.getElementById('safe-acts');
+        const unsafeActsEl = document.getElementById('unsafe-acts');
+        const suggestionsEl = document.getElementById('suggestions');
+
+        const toList = (val) => {
+            if (!val) return [];
+            // Split by new lines or commas, trim, and remove empties
+            return val
+                .split(/\n|,/g)
+                .map(s => (s || '').trim())
+                .filter(Boolean);
+        };
+
+        // Store in a dedicated safetyActs object on stopCardData for later use
+        stopCardData.safetyActs = {
+            safeActsList: toList(safeActsEl?.value || ''),
+            unsafeActsList: toList(unsafeActsEl?.value || '')
+        };
+
+        // Also mirror suggestions into report.suggestions
+        if (suggestionsEl) {
+            stopCardData.report.suggestions = suggestionsEl.value || '';
+        }
+    } catch (e) {
+        console.warn('Could not capture safe/unsafe acts or suggestions:', e);
+    }
+
+    // Build mobile-like assessmentData from the current DOM (categories + questions)
+    try {
+        const buildSection = (tabSelector) => {
+            const sections = Array.from(document.querySelectorAll(`${tabSelector} .checklist-section`));
+            return sections.map(section => {
+                const rawCat = section.querySelector('.section-header h3')?.textContent || '';
+                // Remove leading emojis/symbols and extra spaces
+                const category = rawCat.replace(/^[^\p{L}\p{N}]+/u, '').trim();
+                const items = Array.from(section.querySelectorAll('.checklist-items label.checkbox-item'));
+                const questions = items.map(lbl => {
+                    const input = lbl.querySelector('input[type="checkbox"]');
+                    const text = lbl.querySelector('span')?.textContent?.trim() || '';
+                    return { question: text, status: !!input?.checked };
+                });
+                return { category, questions };
+            });
+        };
+
+        stopCardData.assessmentData = {
+            actions: buildSection('#actions-tab'),
+            conditions: buildSection('#conditions-tab')
+        };
+    } catch (e) {
+        console.warn('Could not build assessmentData structure:', e);
+    }
     
     // Save to local storage
     saveToStorage('stopCardData', stopCardData);
@@ -471,8 +526,19 @@ async function submitStopCard() {
         alert('Please login to submit the report');
         return;
     }
-    
+    // Recompute latest form state and derived structures before submit
     saveStopCardData();
+    try {
+        // Normalize date/time fields (if both provided, keep date only as mobile schema expects YYYY-MM-DD)
+        const dateInput = document.getElementById('report-date')?.value || '';
+        const timeInput = document.getElementById('report-time')?.value || '';
+        if (dateInput) {
+            stopCardData.report.date = dateInput; // YYYY-MM-DD
+        }
+        if (timeInput) {
+            stopCardData.report.time = timeInput; // HH:mm
+        }
+    } catch (_) {}
     
     const submitBtn = document.getElementById('submit-stop-card');
     submitBtn.disabled = true;
@@ -480,10 +546,7 @@ async function submitStopCard() {
     
     try {
         // Prepare report data
-        const reportData = {
-            ...stopCardData,
-            submissionDate: new Date().toISOString()
-        };
+        const reportData = { ...stopCardData, submissionDate: new Date().toISOString() };
         
         console.log('Submitting STOP card data:', reportData);
         
@@ -860,6 +923,112 @@ function renderAnalytics(reports) {
     }, {});
     const usersArray = Object.values(byUser).sort((a,b)=>b.count - a.count);
 
+    // ========= Assessment Analytics (Actions & Conditions) =========
+    const normalizeKey = (s) => String(s || '').toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const firstNonEmpty = (a, b) => (a && a.trim()) ? a : (b || '');
+    const esc = (s) => escapeHtml(String(s ?? ''));
+
+    function buildAssessmentStats(type) {
+        const categoriesMap = new Map(); // catKey -> { category, ok, total }
+        const questionsMap = new Map();  // catKey||qKey -> { category, question, ok, total }
+
+        for (const r of reports) {
+            const items = r.assessmentData?.[type];
+            if (!Array.isArray(items)) continue;
+            for (const cat of items) {
+                const categoryLabel = firstNonEmpty(cat?.category, 'Unknown Category');
+                const catKey = normalizeKey(categoryLabel);
+                const qArr = Array.isArray(cat?.questions) ? cat.questions : [];
+
+                if (!categoriesMap.has(catKey)) {
+                    categoriesMap.set(catKey, { category: categoryLabel, ok: 0, total: 0 });
+                }
+                const catStat = categoriesMap.get(catKey);
+
+                for (const q of qArr) {
+                    const qLabel = firstNonEmpty(q?.question, '—');
+                    const qKey = normalizeKey(qLabel);
+                    const status = !!q?.status;
+                    const key = `${catKey}||${qKey}`;
+
+                    if (!questionsMap.has(key)) {
+                        questionsMap.set(key, { category: categoryLabel, question: qLabel, ok: 0, total: 0 });
+                    }
+                    const qStat = questionsMap.get(key);
+
+                    // Update
+                    qStat.total += 1;
+                    if (status) qStat.ok += 1;
+                    catStat.total += 1;
+                    if (status) catStat.ok += 1;
+                }
+            }
+        }
+
+        // Convert maps to arrays with percentages
+        const cats = Array.from(categoriesMap.values()).map(s => ({
+            category: s.category,
+            ok: s.ok,
+            total: s.total,
+            okPct: s.total ? Math.round((s.ok / s.total) * 100) : 0
+        })).sort((a,b) => a.okPct - b.okPct || a.category.localeCompare(b.category));
+
+        const questions = Array.from(questionsMap.values()).map(s => ({
+            category: s.category,
+            question: s.question,
+            ok: s.ok,
+            total: s.total,
+            okPct: s.total ? Math.round((s.ok / s.total) * 100) : 0
+        })).sort((a,b) => a.okPct - b.okPct || a.question.localeCompare(b.question));
+
+        // Overall % for the type
+        const totalOk = cats.reduce((acc, x) => acc + x.ok, 0);
+        const totalCount = cats.reduce((acc, x) => acc + x.total, 0);
+        const overallPct = totalCount ? Math.round((totalOk / totalCount) * 100) : 0;
+
+        return { cats, questions, overallPct };
+    }
+
+    const actionsStats = buildAssessmentStats('actions');
+    const conditionsStats = buildAssessmentStats('conditions');
+
+    const renderTable = (headers, rowsHtml) => `
+        <div style="overflow:auto;">
+            <table class="data-table">
+                <thead><tr>${headers.map((h,i) => `<th style="${i>0 ? 'text-align:right;' : ''}">${esc(h)}</th>`).join('')}</tr></thead>
+                <tbody>${rowsHtml}</tbody>
+            </table>
+        </div>`;
+
+    // Group questions by category for per-category question stats
+    const groupByCategory = (arr) => arr.reduce((acc, s) => {
+        const key = s.category || 'Unknown Category';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(s);
+        return acc;
+    }, {});
+
+    const actionsByCat = groupByCategory(actionsStats.questions);
+    const conditionsByCat = groupByCategory(conditionsStats.questions);
+
+    const renderQuestionsByCategory = (grouped) => {
+        const sections = Object.entries(grouped).sort((a,b)=>a[0].localeCompare(b[0])).map(([cat, items]) => {
+            // Sort questions alphabetically for stable UI
+            const rows = items.sort((a,b)=>a.question.localeCompare(b.question)).map(s => `
+                <tr>
+                    <td>${esc(s.question)}</td>
+                    <td style="text-align:right;">${fmtPct(s.okPct)}</td>
+                    <td style="text-align:right;">${s.ok}/${s.total}</td>
+                </tr>`).join('');
+            return `
+                <div class="chart" style="margin-top:.5rem;">
+                    <h4>${esc(cat)}</h4>
+                    ${renderTable(['Question', 'OK %', 'OK/Total'], rows)}
+                </div>`;
+        });
+        return sections.join('');
+    };
+
     container.innerHTML = `
         <div class="analytics-grid">
             <div class="stat-card"><div class="stat-title">Total Reports</div><div class="stat-value">${total}</div></div>
@@ -897,10 +1066,33 @@ function renderAnalytics(reports) {
                 </table>
             </div>
         </div>
+
+        <div class="chart" style="margin-top:1rem;">
+            <h3>Actions — Questions by Category</h3>
+            ${actionsStats.questions.length ? renderQuestionsByCategory(actionsByCat) : '<p>No actions questions data.</p>'}
+        </div>
+
+        <div class="chart" style="margin-top:1rem;">
+            <h3>Actions — Category OK% (Overview)</h3>
+            ${actionsStats.cats.length ? actionsStats.cats.map(s => pctBar(s.category, s.okPct, 'var(--success-color, #30D158)')).join('') : '<p>No actions data.</p>'}
+        </div>
+
+        <div class="chart" style="margin-top:1rem;">
+            <h3>Conditions — Questions by Category</h3>
+            ${conditionsStats.questions.length ? renderQuestionsByCategory(conditionsByCat) : '<p>No conditions questions data.</p>'}
+        </div>
+
+        <div class="chart" style="margin-top:1rem;">
+            <h3>Conditions — Category OK% (Overview)</h3>
+            ${conditionsStats.cats.length ? conditionsStats.cats.map(s => pctBar(s.category, s.okPct, 'var(--warning-color, #FF9500)')).join('') : '<p>No conditions data.</p>'}
+        </div>
     `;
 }
 
-function average(arr){ if(!arr.length) return 0; return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function average(arr){
+    if (!Array.isArray(arr) || arr.length === 0) return 0;
+    return arr.reduce((a,b)=>a+b,0) / arr.length;
+}
 function isNum(x){ return typeof x==='number' && !isNaN(x); }
 function fmtPct(x){ return isNum(x)? `${x.toFixed(0)}%` : '—'; }
 function bar(label, value, max){
@@ -909,6 +1101,20 @@ function bar(label, value, max){
         <div style="width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${label}">${label}</div>
         <div style="flex:1;background:var(--background);border:1px solid var(--border-color);border-radius:6px;overflow:hidden;">
             <div style="width:${width}%;min-width:24px;background:var(--primary-color);color:#fff;padding:4px 6px;">${value}</div>
+        </div>
+    </div>`;
+}
+
+// Horizontal percent bar (0-100%) used for category OK% charts
+function pctBar(label, pct, color){
+    const width = isNum(pct) ? Math.max(2, Math.min(100, Math.round(pct))) : 0;
+    const barColor = color || 'var(--primary-color)';
+    const safeLabel = escapeHtml(label);
+    return `<div style="display:flex;align-items:center;margin:6px 0;gap:8px;">
+        <div style="width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${safeLabel}">${safeLabel}</div>
+        <div style="flex:1;background:var(--background);border:1px solid var(--border-color);border-radius:6px;overflow:hidden;position:relative;height:24px;">
+            <div style="width:${width}%;height:100%;background:${barColor};"></div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-end;padding:0 6px;font-size:12px;color:var(--text-color);">${fmtPct(pct)}</div>
         </div>
     </div>`;
 }
@@ -1453,24 +1659,47 @@ function openReportDetails(reportId) {
                 .replace(/^(Action|Actions|Condition|Conditions)\s*-?\s*/i, '');
             return humanize(withoutPrefix);
         };
+        // Normalize question text by removing leading Action/Condition and category prefix
+        const normalizeQuestionText = (rawQ, categoryTitle) => {
+            let q = String(rawQ || '');
+            // replace separators to spaces
+            q = q.replace(/[-_]+/g, ' ');
+            // remove leading action/condition words
+            q = q.replace(/^\s*(Action|Actions|Condition|Conditions)\s+/i, '');
+            const cat = String(categoryTitle || '').replace(/[-_]+/g, ' ').trim();
+            if (cat) {
+                const rx = new RegExp('^\\s*' + cat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s+', 'i');
+                q = q.replace(rx, '');
+            }
+            // collapse spaces and humanize
+            q = q.replace(/\s+/g, ' ').trim();
+            return humanize(q);
+        };
 
         // Helper to render grouped assessment sections (Actions/Conditions)
         const renderAssessmentSection = (title, items) => {
             if (!items || !Array.isArray(items) || items.length === 0) return '';
-            // Render only CHECKED items, and skip empty categories
+            // Render ALL items with a status icon (✅ for OK, ❌ for Not OK)
             const groups = items.map(cat => {
-                const checkedQs = (cat.questions || []).filter(q => q?.status);
-                if (!checkedQs.length) return '';
-                const perQuestion = checkedQs.map(q => {
-                    const qText = humanize(q?.question || '');
+                const questions = Array.isArray(cat.questions) ? cat.questions : [];
+                if (questions.length === 0) return '';
+                const categoryTitle = cleanCategoryTitle(cat.category || '');
+                const perQuestion = questions.map(q => {
+                    const isOk = !!(q?.status);
+                    const qText = normalizeQuestionText(q?.question || '', categoryTitle);
                     const note = q?.note || q?.comment || q?.feedback;
+                    const icon = isOk ? '✅' : '❌';
+                    const color = isOk ? '#28a745' : '#dc3545';
                     return `<li class="qa-item">
-                        <span class="qa-question">${esc(qText)}</span>
+                        <div class="qa-row" style="display:flex;align-items:center;gap:8px;">
+                            <span class="qa-status" style="color:${color};font-weight:700;">${icon}</span>
+                            <span class="qa-question">${esc(qText)}</span>
+                        </div>
                         ${note ? `<div class="qa-feedback">${esc(String(note))}</div>` : ''}
                     </li>`;
                 }).join('');
                 const catNote = cat?.note || cat?.comment || cat?.feedback;
-                const titleText = cleanCategoryTitle(cat.category || '');
+                const titleText = categoryTitle;
                 return `
                     <div class="category-block">
                         <div class="category-header">
@@ -1485,8 +1714,32 @@ function openReportDetails(reportId) {
             return `<h4 class="section-title">${esc(title)}</h4>${groups}`;
         };
 
-        const actionsHtml = renderAssessmentSection('Actions', report.assessmentData?.actions);
-        const conditionsHtml = renderAssessmentSection('Conditions', report.assessmentData?.conditions);
+        // Fallback renderer for legacy web schema (flat key/value)
+        const renderLegacySection = (title, obj) => {
+            if (!obj || typeof obj !== 'object') return '';
+            const keys = Object.keys(obj);
+            if (!keys.length) return '';
+            const items = keys.map(k => {
+                const isOk = !!obj[k];
+                const label = humanize(k);
+                const icon = isOk ? '✅' : '❌';
+                const color = isOk ? '#28a745' : '#dc3545';
+                return `<li class="qa-item">
+                    <div class="qa-row" style="display:flex;align-items:center;gap:8px;">
+                        <span class="qa-status" style="color:${color};font-weight:700;">${icon}</span>
+                        <span class="qa-question">${esc(label)}</span>
+                    </div>
+                </li>`;
+            }).join('');
+            return `<h4 class="section-title">${esc(title)}</h4><ul class="qa-list">${items}</ul>`;
+        };
+
+        const actionsHtml = (report.assessmentData && report.assessmentData.actions)
+            ? renderAssessmentSection('Actions', report.assessmentData.actions)
+            : renderLegacySection('Actions', report.actions);
+        const conditionsHtml = (report.assessmentData && report.assessmentData.conditions)
+            ? renderAssessmentSection('Conditions', report.assessmentData.conditions)
+            : renderLegacySection('Conditions', report.conditions);
 
         // Safety acts HTML
         let safetyActsHtml = '';
