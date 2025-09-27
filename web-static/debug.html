@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafetyPlus Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-result { padding: 10px; margin: 5px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button { padding: 10px 20px; margin: 10px 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>SafetyPlus Debug Test</h1>
+    
+    <div id="test-results"></div>
+    
+    <button onclick="testBasicJS()">Test Basic JavaScript</button>
+    <button onclick="testFirebaseLoad()">Test Firebase Loading</button>
+    <button onclick="testAuthentication()">Test Authentication</button>
+    <button onclick="testFirestore()">Test Firestore</button>
+    
+    <hr>
+    
+    <h3>Manual Tests:</h3>
+    <div>
+        <input type="email" id="test-email" placeholder="test@example.com" value="test@example.com">
+        <input type="password" id="test-password" placeholder="password" value="123456">
+        <button onclick="testSignup()">Test Signup</button>
+        <button onclick="testLogin()">Test Login</button>
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <button onclick="testSaveReport()">Test Save Report</button>
+        <button onclick="testLoadReports()">Test Load Reports</button>
+    </div>
+
+    <!-- Firebase CDN Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <script src="firebase-web.js"></script>
+
+    <script>
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('test-results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = `${new Date().toLocaleTimeString()}: ${message}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function testBasicJS() {
+            addResult('Testing basic JavaScript...', 'info');
+            
+            try {
+                // Test basic operations
+                const test = { a: 1, b: 2 };
+                const result = test.a + test.b;
+                addResult(`✅ Basic JavaScript works: ${result}`, 'success');
+                
+                // Test localStorage
+                localStorage.setItem('test', 'value');
+                const stored = localStorage.getItem('test');
+                addResult(`✅ LocalStorage works: ${stored}`, 'success');
+                localStorage.removeItem('test');
+                
+            } catch (error) {
+                addResult(`❌ Basic JavaScript error: ${error.message}`, 'error');
+            }
+        }
+
+        function testFirebaseLoad() {
+            addResult('Testing Firebase loading...', 'info');
+            
+            try {
+                if (typeof firebase === 'undefined') {
+                    addResult('❌ Firebase SDK not loaded', 'error');
+                    return;
+                }
+                addResult('✅ Firebase SDK loaded', 'success');
+                
+                if (typeof window.FirebaseWeb === 'undefined') {
+                    addResult('❌ FirebaseWeb not loaded', 'error');
+                    return;
+                }
+                addResult('✅ FirebaseWeb loaded', 'success');
+                
+                const initialized = window.FirebaseWeb.initializeFirebase();
+                if (initialized) {
+                    addResult('✅ Firebase initialized successfully', 'success');
+                } else {
+                    addResult('❌ Firebase initialization failed', 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Firebase loading error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAuthentication() {
+            addResult('Testing Firebase Auth...', 'info');
+            
+            try {
+                const auth = window.FirebaseWeb.getAuth();
+                if (!auth) {
+                    addResult('❌ Firebase Auth not available', 'error');
+                    return;
+                }
+                addResult('✅ Firebase Auth available', 'success');
+                
+                const currentUser = window.FirebaseWeb.getCurrentUser();
+                if (currentUser) {
+                    addResult(`✅ User is signed in: ${currentUser.email}`, 'success');
+                } else {
+                    addResult('ℹ️ No user currently signed in', 'info');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Auth test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testFirestore() {
+            addResult('Testing Firestore...', 'info');
+            
+            try {
+                const db = window.FirebaseWeb.getDb();
+                if (!db) {
+                    addResult('❌ Firestore not available', 'error');
+                    return;
+                }
+                addResult('✅ Firestore available', 'success');
+                
+                // Try to read from a test collection
+                const testQuery = db.collection('test').limit(1);
+                const querySnapshot = await testQuery.get();
+                addResult(`✅ Firestore query successful (${querySnapshot.size} docs)`, 'success');
+                
+            } catch (error) {
+                addResult(`❌ Firestore test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSignup() {
+            const email = document.getElementById('test-email').value;
+            const password = document.getElementById('test-password').value;
+            
+            addResult(`Testing signup with ${email}...`, 'info');
+            
+            try {
+                const result = await window.FirebaseWeb.signupWithFirebase(email, password, 'Test User');
+                if (result.success) {
+                    addResult(`✅ Signup successful: ${result.message}`, 'success');
+                } else {
+                    addResult(`❌ Signup failed: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Signup error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('test-email').value;
+            const password = document.getElementById('test-password').value;
+            
+            addResult(`Testing login with ${email}...`, 'info');
+            
+            try {
+                const result = await window.FirebaseWeb.signinWithFirebase(email, password);
+                if (result.success) {
+                    addResult(`✅ Login successful: ${result.message}`, 'success');
+                } else {
+                    addResult(`❌ Login failed: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Login error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSaveReport() {
+            addResult('Testing save STOP card...', 'info');
+            
+            try {
+                const testData = {
+                    actions: { 'test-action': true },
+                    conditions: { 'test-condition': true },
+                    report: {
+                        site: 'Test Site',
+                        date: '2025-09-27',
+                        time: '14:30',
+                        observations: {
+                            safe: 'Test safe observation'
+                        }
+                    }
+                };
+                
+                const result = await window.FirebaseWeb.saveStopCardToFirestore(testData);
+                if (result.success) {
+                    addResult(`✅ Save successful: ${result.reportId}`, 'success');
+                } else {
+                    addResult(`❌ Save failed: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Save error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLoadReports() {
+            addResult('Testing load reports...', 'info');
+            
+            try {
+                const result = await window.FirebaseWeb.getStopCardsFromFirestore();
+                if (result.success) {
+                    addResult(`✅ Load successful: ${result.reports.length} reports found`, 'success');
+                    result.reports.forEach(report => {
+                        addResult(`  📄 Report: ${report.report?.site || 'Unknown'} - ${report.id}`, 'info');
+                    });
+                } else {
+                    addResult(`❌ Load failed: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Load error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run basic tests
+        window.onload = function() {
+            addResult('SafetyPlus Debug Test Started', 'info');
+            testBasicJS();
+            setTimeout(testFirebaseLoad, 1000);
+        };
+    </script>
+</body>
+</html>

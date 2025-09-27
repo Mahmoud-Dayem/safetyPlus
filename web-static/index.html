@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafetyPlus - Safety Management System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="../assets/adaptive-icon.png">
+    
+    <!-- Firebase CDN Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading" class="screen loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>SafetyPlus</h2>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Authentication Screen -->
+    <div id="auth" class="screen hidden">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h1>SafetyPlus</h1>
+                <p>Professional Safety Management System</p>
+            </div>
+            
+            <div class="auth-tabs">
+                <button id="login-tab" class="tab-btn active" onclick="switchAuthTab('login')">Login</button>
+                <button id="signup-tab" class="tab-btn" onclick="switchAuthTab('signup')">Sign Up</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form">
+                <div class="input-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="input-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="button" class="auth-btn" onclick="login()">Login</button>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="signup-form" class="auth-form hidden">
+                <div class="input-group">
+                    <label for="signup-name">Full Name</label>
+                    <input type="text" id="signup-name" required>
+                </div>
+                <div class="input-group">
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" required>
+                </div>
+                <div class="input-group">
+                    <label for="signup-company">Company ID</label>
+                    <input type="text" id="signup-company" required>
+                </div>
+                <div class="input-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" required>
+                </div>
+                <div class="input-group">
+                    <label for="signup-confirm">Confirm Password</label>
+                    <input type="password" id="signup-confirm" required>
+                </div>
+                <button type="button" class="auth-btn" onclick="signup()">Sign Up</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Home Screen -->
+    <div id="home" class="screen hidden">
+        <header class="header">
+            <div class="header-content">
+                <h1>SafetyPlus</h1>
+                <div class="user-info">
+                    <span id="user-name">User</span>
+                                        <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="welcome-section">
+                <h2>Welcome to SafetyPlus</h2>
+                <p>Professional Safety Management and STOP Card System</p>
+            </div>
+
+            <div class="action-buttons">
+                <button id="create-stop-card" class="action-btn primary" onclick="showStopCard()">
+                    <span class="btn-icon">📋</span>
+                    <div class="btn-text">
+                        <h3>Create STOP Card</h3>
+                        <p>Conduct safety observations</p>
+                    </div>
+                </button>
+
+                <button id="view-reports" class="action-btn secondary" onclick="showReports()">
+                    <span class="btn-icon">📊</span>
+                    <div class="btn-text">
+                        <h3>View Reports</h3>
+                        <p>Review safety history</p>
+                    </div>
+                </button>
+
+                    <button id="detailed-reports-btn" class="action-btn tertiary" onclick="showDetailedReports()">
+                    <span class="btn-icon">🗂️</span>
+                    <div class="btn-text">
+                        <h3>All Reports</h3>
+                        <p>View all system reports</p>
+                    </div>
+                </button>
+
+                    <button id="analytics-btn" class="action-btn tertiary" onclick="showAnalytics()">
+                        <span class="btn-icon">📈</span>
+                        <div class="btn-text">
+                            <h3>Data Analytics</h3>
+                            <p>Explore insights and trends</p>
+                        </div>
+                    </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- STOP Card Screen -->
+    <div id="stop-card" class="screen hidden">
+        <header class="header">
+            <div class="header-content">
+                <button class="back-btn" onclick="goBack()">← Back</button>
+                <h1>STOP Card</h1>
+                <div class="user-info">
+                    <span id="stop-user-name">User</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="stop-card-content">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('actions')">Actions</button>
+                <button class="tab-btn" onclick="switchTab('conditions')">Conditions</button>
+                <button class="tab-btn" onclick="switchTab('report')">Report</button>
+            </div>
+
+            <!-- Actions Tab -->
+            <div id="actions-tab" class="tab-content active">
+                <div class="checklist-section">
+                    <div class="section-header">
+                        <h3>🙋‍♂️ Reactions of People</h3>
+                        <label class="checkbox-item select-all-category">
+                            <input type="checkbox">
+                            <span>Select All</span>
+                        </label>
+                    </div>
+                    <div class="checklist-items">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-ppe-adjust" name="action" value="ppe-adjust">
+                            <span>Adjusting Personal Protective Equipment</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-position-change" name="action" value="position-change">
+                            <span>Changing Position</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-job-rearrange" name="action" value="job-rearrange">
+                            <span>Rearranging Jobs</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-stop-job" name="action" value="stop-job">
+                            <span>Stopping job</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-attaching-grounds" name="action" value="attaching-grounds">
+                            <span>Attaching Grounds</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-performing-lockouts" name="action" value="performing-lockouts">
+                            <span>Performing Lockouts</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="checklist-section">
+                    <div class="section-header">
+                        <h3>⚠️ Positions of People (Injury Causes)</h3>
+                        <label class="checkbox-item select-all-category">
+                            <input type="checkbox">
+                            <span>Select All</span>
+                        </label>
+                    </div>
+                    <div class="checklist-items">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-struck-objects" name="action" value="struck-objects">
+                            <span>Striking Against or Being Struck by Objects</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-caught-between" name="action" value="caught-between">
+                            <span>Caught In, On, or Between Objects</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-falling" name="action" value="falling">
+                            <span>Falling</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-temperature" name="action" value="temperature">
+                            <span>Contacting Temperatures Extremes</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-electric-current" name="action" value="electric-current">
+                            <span>Contacting Electric Current</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-hazardous-substance" name="action" value="hazardous-substance">
+                            <span>Inhaling, Absorbing, or Swallowing a Hazardous Substance</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-repetitive-motions" name="action" value="repetitive-motions">
+                            <span>Repetitive Motions</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-awkward-positions" name="action" value="awkward-positions">
+                            <span>Awkward Positions/ Static Posture</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="checklist-section">
+                    <div class="section-header">
+                        <h3>🛡️ Personal Protective Equipment (Head to Toe Check)</h3>
+                        <label class="checkbox-item select-all-category">
+                            <input type="checkbox">
+                            <span>Select All</span>
+                        </label>
+                    </div>
+                    <div class="checklist-items">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-ppe-head" name="action" value="ppe-head">
+                            <span>Head</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-ppe-eyes-face" name="action" value="ppe-eyes-face">
+                            <span>Eyes and Face</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-ppe-ears" name="action" value="ppe-ears">
+                            <span>Ears</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-ppe-respiratory" name="action" value="ppe-respiratory">
+                            <span>Respiratory System</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-ppe-arms-hands" name="action" value="ppe-arms-hands">
+                            <span>Arms and Hands</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-ppe-trunk" name="action" value="ppe-trunk">
+                            <span>Trunk</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-ppe-legs-feet" name="action" value="ppe-legs-feet">
+                            <span>Legs and Feet</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="checklist-section">
+                    <div class="section-header">
+                        <h3>🔧 Tools and Equipment</h3>
+                        <label class="checkbox-item select-all-category">
+                            <input type="checkbox">
+                            <span>Select All</span>
+                        </label>
+                    </div>
+                    <div class="checklist-items">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-tools-right-job" name="action" value="tools-right-job">
+                            <span>Right for the Job</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-tools-used-correctly" name="action" value="tools-used-correctly">
+                            <span>Used Correctly</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-tools-safe-conditions" name="action" value="tools-safe-conditions">
+                            <span>In Safe Conditions</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="checklist-section">
+                    <div class="section-header">
+                        <h3>📋 Procedures</h3>
+                        <label class="checkbox-item select-all-category">
+                            <input type="checkbox">
+                            <span>Select All</span>
+                        </label>
+                    </div>
+                    <div class="checklist-items">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-procedures-available" name="action" value="procedures-available">
+                            <span>Available</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-procedures-adequate" name="action" value="procedures-adequate">
+                            <span>Adequate</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-procedures-known" name="action" value="procedures-known">
+                            <span>Known</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-procedures-understood" name="action" value="procedures-understood">
+                            <span>Understood</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-procedures-followed" name="action" value="procedures-followed">
+                            <span>Followed</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="checklist-section">
+                    <div class="section-header">
+                        <h3>📚 Orderliness (Standards)</h3>
+                        <label class="checkbox-item select-all-category">
+                            <input type="checkbox">
+                            <span>Select All</span>
+                        </label>
+                    </div>
+                    <div class="checklist-items">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-orderliness-known" name="action" value="orderliness-known">
+                            <span>Known</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-orderliness-understood" name="action" value="orderliness-understood">
+                            <span>Understood</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="action-orderliness-followed" name="action" value="orderliness-followed">
+                            <span>Followed</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conditions Tab -->
+            <div id="conditions-tab" class="tab-content">
+                <div class="checklist-section">
+                    <div class="section-header">
+                        <h3>🔧 Tools and Equipment</h3>
+                        <label class="checkbox-item select-all-category">
+                            <input type="checkbox">
+                            <span>Select All</span>
+                        </label>
+                    </div>
+                    <div class="checklist-items">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="condition-tools-right-job" name="condition" value="tools-right-job">
+                            <span>Right for the job</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="condition-tools-safe-condition" name="condition" value="tools-safe-condition">
+                            <span>Is Safe Condition</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="checklist-section">
+                    <div class="section-header">
+                        <h3>🏗️ Structures and Work Areas</h3>
+                        <label class="checkbox-item select-all-category">
+                            <input type="checkbox">
+                            <span>Select All</span>
+                        </label>
+                    </div>
+                    <div class="checklist-items">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="condition-structures-clean" name="condition" value="structures-clean">
+                            <span>Clean</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="condition-structures-orderly" name="condition" value="structures-orderly">
+                            <span>Orderly</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="condition-structures-right-job" name="condition" value="structures-right-job">
+                            <span>Right for the Job</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="condition-structures-safe-condition" name="condition" value="structures-safe-condition">
+                            <span>In Safe Condition</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="checklist-section">
+                    <div class="section-header">
+                        <h3>🌍 Environment (Is It)</h3>
+                        <label class="checkbox-item select-all-category">
+                            <input type="checkbox">
+                            <span>Select All</span>
+                        </label>
+                    </div>
+                    <div class="checklist-items">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="condition-environment-clean" name="condition" value="environment-clean">
+                            <span>Clean</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="condition-environment-orderly" name="condition" value="environment-orderly">
+                            <span>Orderly</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="condition-environment-safe-condition" name="condition" value="environment-safe-condition">
+                            <span>In Safe Condition</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="checklist-section">
+                    <div class="section-header">
+                        <h3>✅ Orderliness (Standards)</h3>
+                        <label class="checkbox-item select-all-category">
+                            <input type="checkbox">
+                            <span>Select All</span>
+                        </label>
+                    </div>
+                    <div class="checklist-items">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="condition-standards-available" name="condition" value="standards-available">
+                            <span>Available</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="condition-standards-adequate" name="condition" value="standards-adequate">
+                            <span>Adequate</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Tab -->
+            <div id="report-tab" class="tab-content">
+                <div class="form-section">
+                    <h3>📝 Report Details</h3>
+                    
+                    <div class="input-group">
+                        <label for="report-site">Site</label>
+                        <select id="report-site" required>
+                            <option value="">Select Site</option>
+                            <option value="LimeStone Crusher& Storage">LimeStone Crusher & Storage</option>
+                            <option value="Additives Crusher & Storage">Additives Crusher & Storage</option>
+                            <option value="Corrective Crusher& Storage">Corrective Crusher & Storage</option>
+                            <option value="Raw Mill & Feeding Area">Raw Mill & Feeding Area</option>
+                            <option value="kiln">Kiln</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="report-area">Area</label>
+                        <input type="text" id="report-area" placeholder="Specific area within site">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="report-shift">Shift</label>
+                        <select id="report-shift">
+                            <option value="General">General</option>
+                            <option value="Day Shift">Day Shift</option>
+                            <option value="Night Shift">Night Shift</option>
+                            <option value="Morning Shift">Morning Shift</option>
+                        </select>
+                    </div>
+
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="report-date">Date</label>
+                            <input type="date" id="report-date" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="report-time">Time</label>
+                            <input type="time" id="report-time" required>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="report-duration">Duration (minutes)</label>
+                            <input type="number" id="report-duration" min="1" placeholder="e.g. 30">
+                        </div>
+                        <div class="input-group">
+                            <label for="report-people-conducted">People Conducted</label>
+                            <input type="number" id="report-people-conducted" min="1" placeholder="e.g. 5">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="report-people-observed">People Observed</label>
+                        <input type="number" id="report-people-observed" min="1" placeholder="e.g. 10">
+                    </div>
+
+                    
+
+                    <div class="observations-section">
+                        <div class="observation-group">
+                            <h4>✅ Safe Acts Observed</h4>
+                            <textarea id="safe-acts" placeholder="Describe safe behaviors observed..."></textarea>
+                        </div>
+                        
+                        <div class="observation-group">
+                            <h4>⚠️ Unsafe Acts Observed</h4>
+                            <textarea id="unsafe-acts" placeholder="Describe unsafe behaviors observed..."></textarea>
+                        </div>
+
+                        <div class="observation-group">
+                            <h4>💡 Suggestions for Improvement</h4>
+                            <textarea id="suggestions" placeholder="Your suggestions for safety improvements..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="submit-section">
+                        <div class="progress-indicator">
+                            <div class="progress-bar">
+                                <div id="progress-fill" class="progress-fill"></div>
+                            </div>
+                            <span id="progress-text">0% Complete</span>
+                        </div>
+                        
+                        <button id="submit-stop-card" class="submit-btn" disabled onclick="submitStopCard()">
+                            Submit STOP Card
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Reports Screen -->
+    <div id="reports" class="screen hidden">
+        <header class="header">
+            <div class="header-content">
+                <button class="back-btn" onclick="goBack()">← Back</button>
+                <h1>Report History</h1>
+                <div class="user-info">
+                    <span id="reports-user-name">User</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="reports-content">
+            <div class="reports-actions">
+                <button id="refresh-reports" class="refresh-btn" onclick="refreshReports()">🔄 Refresh</button>
+            </div>
+            
+            <div id="reports-list" class="reports-list">
+                <div class="no-reports">
+                    <p>No reports found. Create your first STOP Card!</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Detailed Reports Screen -->
+    <div id="detailed-reports" class="screen hidden">
+        <header class="header">
+            <div class="header-content">
+                <button class="back-btn" onclick="goBack()">← Back</button>
+                <h1>All System Reports</h1>
+            </div>
+        </header>
+
+        <main class="detailed-reports-content">
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <div class="filter-controls">
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="Search by Report ID, User Name, Site, Area, or Company ID..." onkeyup="filterReports()">
+                        <span class="search-icon">🔍</span>
+                    </div>
+                    <button class="filter-btn" onclick="clearFilters()">Clear</button>
+                </div>
+                <div class="filter-stats">
+                    <span id="reports-count">Loading reports...</span>
+                </div>
+            </div>
+
+            <!-- Reports Grid -->
+            <div id="reports-grid" class="reports-grid">
+                <div class="loading-message">
+                    <p>Loading reports...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Analytics Screen -->
+    <div id="analytics" class="screen hidden">
+        <header class="header">
+            <div class="header-content">
+                <button class="back-btn" onclick="goBack()">← Back</button>
+                <h1>Analytics Dashboard</h1>
+            </div>
+        </header>
+
+        <main class="analytics-content">
+            <div id="analytics-container">
+                <div class="loading-message"><p>Loading analytics...</p></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="success-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✅ Success!</h3>
+            </div>
+            <div class="modal-body">
+                <p id="success-message">STOP Card submitted successfully!</p>
+            </div>
+            <div class="modal-footer">
+                <button id="close-success" class="modal-btn" onclick="hideModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Details Modal -->
+    <div id="report-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="report-modal-title">Report Details</h3>
+            </div>
+            <div class="modal-body" id="report-modal-body">
+                <!-- Filled dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" onclick="closeReportModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="firebase-web.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
