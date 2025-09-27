@@ -6,7 +6,7 @@ export default {
         slug: "safetyplus-app",
         version: "1.0.0",
         orientation: "portrait",
-        icon: "./assets/splash-icon-new.png",
+        icon: "./assets/adaptive-icon.png",
         userInterfaceStyle: "light",
         newArchEnabled: true,
         scheme: "safetyplus",
@@ -19,12 +19,12 @@ export default {
             supportsTablet: true,
             bundleIdentifier: "com.safetyplus.app",
             buildNumber: "1",
-            icon: "./assets/splash-icon-new.png",
+            icon: "./assets/adaptive-icon",
         },
         android: {
              
             adaptiveIcon: {
-                foregroundImage: "./assets/adaptive-icon.png",
+                foregroundImage: "./assets/adaptive-icon",
                 backgroundColor: "#ffffff"
             },
             package: "com.safetyplus.app",
@@ -32,9 +32,10 @@ export default {
             edgeToEdgeEnabled: true
         },
         web: {
-            favicon: "./assets/favicon.png"
+            favicon: "./assets/adaptive-icon.png"
         },
         plugins: [
+            "expo-font",
             [
                 "expo-build-properties",
                 {

@@ -6,24 +6,39 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuth, createUserWithEmailAndPassword, updateProfile, getReactNativePersistence, initializeAuth, signInWithEmailAndPassword } from "firebase/auth";
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
-const {
-  firebaseApiKey,
-  firebaseAuthDomain,
-  firebaseProjectId,
-  firebaseStorageBucket,
-  firebaseMessagingSenderId,
-  firebaseAppId,
-} = Constants.expoConfig.extra;
 
+// Safely get environment variables with fallbacks
+const getEnvVar = (key, fallback = '') => {
+  try {
+    return Constants.expoConfig?.extra?.[key] || process.env[key] || fallback;
+  } catch (error) {
+    console.warn(`Failed to load environment variable: ${key}`, error);
+    return fallback;
+  }
+};
 
 const firebaseConfig = {
-  apiKey: firebaseApiKey,
-  authDomain: firebaseAuthDomain,
-  projectId: firebaseProjectId,
-  storageBucket: firebaseStorageBucket,
-  messagingSenderId: firebaseMessagingSenderId,
-  appId: firebaseAppId,
+  apiKey: getEnvVar('firebaseApiKey'),
+  authDomain: getEnvVar('firebaseAuthDomain'),
+  projectId: getEnvVar('firebaseProjectId'),
+  storageBucket: getEnvVar('firebaseStorageBucket'),
+  messagingSenderId: getEnvVar('firebaseMessagingSenderId'),
+  appId: getEnvVar('firebaseAppId'),
 };
+
+// Validate Firebase config
+const validateConfig = () => {
+  const required = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
+  const missing = required.filter(key => !firebaseConfig[key]);
+  
+  if (missing.length > 0) {
+    console.error('Missing Firebase configuration:', missing);
+    throw new Error(`Missing Firebase config: ${missing.join(', ')}`);
+  }
+};
+
+// Validate configuration
+validateConfig();
 
 const app = initializeApp(firebaseConfig);
 // Initialize Firebase Authentication and get a reference to the service

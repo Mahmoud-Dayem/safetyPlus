@@ -1,4 +1,6 @@
-# =============================================================================
+# 
+npx expo-doctor
+=============================================================================
 # INSTRUMENTATION MOBILE APP - BUILD COMMANDS REFERENCE
 # =============================================================================
 # This file contains essential commands for building, deploying, and managing

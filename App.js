@@ -8,6 +8,7 @@ import { logout, saveUser } from './store/authSlice';
 
 import ReportHistory from './screens/ReportHistory';
 import AuthScreen from './screens/AuthScreen';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useDispatch } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import store from './store/store';
@@ -120,15 +121,17 @@ export default function App() {
 
 
   return (
-    <SafeAreaProvider>
-      <Provider store={store}>
-        <NavigationContainer>
-          <RootStack/>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <Provider store={store}>
+          <NavigationContainer>
+            <RootStack/>
 
-        </NavigationContainer>
-      </Provider>
+          </NavigationContainer>
+        </Provider>
 
-    </SafeAreaProvider >
+      </SafeAreaProvider >
+    </ErrorBoundary>
   );
 }
 

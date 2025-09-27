@@ -109,7 +109,7 @@ const ReportHistory = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor={colors.primary || '#FF9500'}
         translucent={false}
         hidden={false}

@@ -735,9 +735,9 @@ const StopCard = () => {
 
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container}>
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor={colors.primary || "#FF9500"}
         translucent={false}
         hidden={false}
