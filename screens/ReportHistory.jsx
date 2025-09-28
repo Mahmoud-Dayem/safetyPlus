@@ -17,17 +17,18 @@ import { colors } from '../constants/color';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import StopCardReportsService from '../firebase/stopCardReportsService';
-
+import StopCardModal from '../components/StopCardModal';
 const ReportHistory = () => {
   const navigation = useNavigation();
   const user = useSelector(state => state.auth.user);
   const name = user?.displayName;
   const id = user?.companyId;
-  
+
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-
+  const [visible, setVisible] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
   useEffect(() => {
     loadCachedReports();
   }, [id]);
@@ -41,6 +42,7 @@ const ReportHistory = () => {
         if (cachedData) {
           const allReports = JSON.parse(cachedData);
           setReports(allReports);
+          console.log('xxxxxxxxxxxxxxxxxxx', reports);
         } else {
           setReports([]); // No cached data
         }
@@ -57,16 +59,16 @@ const ReportHistory = () => {
       setRefreshing(true);
       if (id) {
         const userReports = await StopCardReportsService.getUserReports(id, 200);
-      
-        
-        
+
+
+
         // Cache the reports
         const cacheKey = `reports_${id}`;
         await AsyncStorage.setItem(cacheKey, JSON.stringify(userReports));
-        
+
         // Display reports
         setReports(userReports);
-        
+
         // Alert.alert('Success', `Loaded ${userReports.length} reports from cloud`);
       }
     } catch (error) {
@@ -88,22 +90,35 @@ const ReportHistory = () => {
       year: 'numeric'
     });
   };
-   
 
+  const handleReportPress = (item) => {
+    setVisible(true);
+    console.log('Item pressed:', item);
+
+  }
   const renderReportCard = ({ item }) => (
-    <View style={styles.reportCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.siteContainer}>
-          <Text style={styles.siteLabel}>SITE</Text>
-          <Text style={styles.siteValue}>{item.siteInfo?.site || 'Unknown Site'}</Text>
+    <TouchableOpacity onPress={() => {
+      setSelectedReport(item); // store selected report
+      setVisible(true);        // open modal
+    }}>
+
+
+
+      <View style={styles.reportCard}>
+        <View style={styles.cardHeader}>
+          <View style={styles.siteContainer}>
+            <Text style={styles.siteLabel}>SITE</Text>
+            <Text style={styles.siteValue}>{item.siteInfo?.site || 'Unknown Site'}</Text>
+          </View>
+          <Text style={styles.dateText}>{item.siteInfo?.date}</Text>
         </View>
-        <Text style={styles.dateText}>{item.siteInfo?.date }</Text>
+        <View style={styles.areaRow}>
+          <Text style={styles.areaLabel}>AREA</Text>
+          <Text style={styles.areaValue}>{item.siteInfo?.area || 'Unknown Area'}</Text>
+        </View>
       </View>
-      <View style={styles.areaRow}>
-        <Text style={styles.areaLabel}>AREA</Text>
-        <Text style={styles.areaValue}>{item.siteInfo?.area || 'Unknown Area'}</Text>
-      </View>
-    </View>
+
+    </TouchableOpacity>
   );
 
   return (
@@ -114,10 +129,10 @@ const ReportHistory = () => {
         translucent={false}
         hidden={false}
       />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
@@ -132,18 +147,18 @@ const ReportHistory = () => {
           </View>
         </View>
         <View style={styles.headerRightContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.refreshButton}
             onPress={fetchReportsFromFirestore}
             disabled={refreshing}
           >
-            <Ionicons 
-              name={refreshing ? "sync" : "cloud-download-outline"} 
-              size={24} 
-              color="#FFFFFF" 
+            <Ionicons
+              name={refreshing ? "sync" : "cloud-download-outline"}
+              size={24}
+              color="#FFFFFF"
             />
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.homeButton}
             onPress={() => navigation.navigate('Home')}
           >
@@ -154,7 +169,7 @@ const ReportHistory = () => {
 
       <ScrollView style={styles.content}>
         {/* Create New Report Button */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.createButton}
           onPress={() => navigation.navigate('StopCard')}
         >
@@ -183,10 +198,10 @@ const ReportHistory = () => {
         {/* Reports List */}
         {reports.length === 0 && !refreshing ? (
           <View style={styles.emptyState}>
-            <Ionicons 
-              name="document-text-outline" 
-              size={80} 
-              color={colors.textSecondary || '#8E8E93'} 
+            <Ionicons
+              name="document-text-outline"
+              size={80}
+              color={colors.textSecondary || '#8E8E93'}
             />
             <Text style={styles.emptyTitle}>No Reports Found</Text>
             <Text style={styles.emptySubtitle}>
@@ -202,6 +217,13 @@ const ReportHistory = () => {
             scrollEnabled={false}
           />
         )}
+       {selectedReport && (
+        <StopCardModal
+          data={selectedReport}
+          visible={visible}
+          setVisible={setVisible}
+        />
+      )}
       </ScrollView>
     </SafeAreaView>
   );

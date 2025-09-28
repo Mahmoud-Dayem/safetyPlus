@@ -65,7 +65,11 @@ const StopCard = () => {
       headerStyle: {
         backgroundColor: colors.primary || "#FF9500",
         height: 110, // Increased height for better spacing
+        shadowColor: 'transparent', // iOS remove shadow line
+        elevation: 0, // Android remove shadow
+        borderBottomWidth: 0, // Remove bottom hairline
       },
+      headerShadowVisible: false, // RN v6: remove bottom shadow
       headerTintColor: "#fff",
       headerTitle: () => (
         <View style={styles.headerTitleContainer}>
@@ -735,9 +739,9 @@ const StopCard = () => {
 
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left','right','bottom']}>
       <StatusBar
-        barStyle="dark-content"
+        barStyle="light-content"
         backgroundColor={colors.primary || "#FF9500"}
         translucent={false}
         hidden={false}
@@ -1258,7 +1262,7 @@ const StopCard = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff' || colors.primary || "#FF9500",
+    backgroundColor: colors.background || '#F8F9FA',
   },
   scrollView: {
     flex: 1,
@@ -1392,8 +1396,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.primary || '#FF9500',
     paddingHorizontal: 15,
-    paddingTop: 15,
+    paddingTop: 8,
     paddingBottom: 5,
+    marginTop: -1, // pull up to remove any hairline gap
   },
   tab: {
     flex: 1,

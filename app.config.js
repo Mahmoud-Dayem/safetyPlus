@@ -19,12 +19,12 @@ export default {
             supportsTablet: true,
             bundleIdentifier: "com.safetyplus.app",
             buildNumber: "1",
-            icon: "./assets/adaptive-icon",
+            icon: "./assets/adaptive-icon.png",
         },
         android: {
              
             adaptiveIcon: {
-                foregroundImage: "./assets/adaptive-icon",
+                foregroundImage: "./assets/adaptive-icon.png",
                 backgroundColor: "#ffffff"
             },
             package: "com.safetyplus.app",
