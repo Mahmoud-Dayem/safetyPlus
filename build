@@ -113,3 +113,4 @@ eas build -p android --profile preview # Generates APK file for testing
 # For Development: npx expo start --clear
 # For Troubleshooting: Delete node_modules → npm install → npx expo start --clear
 # =============================================================================
+firebase url https://safetyplusapp-8f368.web.app/

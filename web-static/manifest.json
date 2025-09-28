@@ -1,0 +1,22 @@
+{
+  "name": "SafetyPlus",
+  "short_name": "SafetyPlus",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0a84ff",
+  "icons": [    
+    {
+      "src": "./assets/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/adaptive-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

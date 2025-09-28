@@ -665,6 +665,7 @@ async function loadReports() {
                 let reportDate = 'N/A';
                 let userName = 'Unknown User';
                 let platform = 'Unknown';
+                let companyId = '';
                 let actionsCompletion = 0;
                 let conditionsCompletion = 0;
                 let suggestions = '';
@@ -679,6 +680,7 @@ async function loadReports() {
                     reportDate = report.siteInfo?.date || report.submittedAt?.split('T')[0] || 'N/A';
                     userName = report.userInfo?.displayName || report.userName || 'Unknown User';
                     platform = report.metadata?.platform || 'mobile';
+                    companyId = report.userInfo?.companyId || '';
                     actionsCompletion = report.completionRates?.actionsCompletion || 0;
                     conditionsCompletion = report.completionRates?.conditionsCompletion || 0;
                     suggestions = report.feedback?.suggestions || '';
@@ -692,13 +694,14 @@ async function loadReports() {
                     userName = report.userName || 'Unknown User';
                     platform = 'web (legacy)';
                     suggestions = report.report?.description || report.description || '';
+                    companyId = report.companyId || '';
                 }
                 
                 const rid = report.reportId || report.id || '';
                 return `
-                    <div class="report-item" data-report-id="${rid}">
+                    <div class="report-item" data-report-id="${rid}" data-company-id="${companyId}">
                         <div class="report-header">
-                            <div class="report-title">${userName} — ${rid}</div>
+                            <div class="report-title">${userName} — ${companyId || '—'}</div>
                             <div class="report-date">${formattedDate}</div>
                         </div>
                         <div class="report-details">
@@ -1759,7 +1762,7 @@ function openReportDetails(reportId) {
         
         if (!modal || !modalBody || !modalTitle) return;
         
-        modalTitle.textContent = `${esc(userName)} — ${esc(report.reportId || report.id)}`;
+    modalTitle.textContent = `${esc(userName)} — ${esc(companyId || '—')}`;
 
         const completionChips = (actionsCompletion != null || conditionsCompletion != null)
             ? `<div class="chip-group">
