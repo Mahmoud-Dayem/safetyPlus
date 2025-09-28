@@ -1,5 +1,23 @@
 // SafetyPlus Static Web App JavaScript
 
+// Silence verbose logs in production while keeping errors/warnings
+(function () {
+    try {
+        const isLocal = typeof location !== 'undefined' && (/^localhost$|^127\.0\.0\.1$/.test(location.hostname));
+        const debugFlag = typeof window !== 'undefined' && window.__ENABLE_DEBUG_LOGS__ === true;
+        if (!isLocal && !debugFlag) {
+            if (typeof console !== 'undefined') {
+                console.log = function () {};
+                if (typeof console.debug === 'function') {
+                    console.debug = function () {};
+                }
+            }
+        }
+    } catch (_) {
+        // no-op
+    }
+})();
+
 // Configuration
 const CONFIG = {
     FIREBASE_CONFIG: {
